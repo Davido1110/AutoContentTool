@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, Form, File
+from fastapi import FastAPI, UploadFile, Form, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -8,8 +8,9 @@ from dotenv import load_dotenv
 from mangum import Mangum
 import logging
 import sys
+import json
 
-# Configure logging to stdout
+# Configure logging to stdout with more details
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -20,8 +21,14 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
-# Initialize FastAPI app
-app = FastAPI()
+# Initialize FastAPI app with docs configuration
+app = FastAPI(
+    title="Content Generator API",
+    description="API for generating content using OpenAI",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
 
 # Enable CORS
 app.add_middleware(
@@ -38,10 +45,10 @@ handler = Mangum(app)
 # Set your OpenAI API key
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
-    logger.error("OpenAI API key not found")
+    logger.error("OpenAI API key not found in environment variables")
 else:
     openai.api_key = api_key
-    logger.info("OpenAI API key loaded")
+    logger.info("OpenAI API key loaded successfully")
 
 class ContentRequest(BaseModel):
     image_url: Optional[str] = None
@@ -53,7 +60,13 @@ class ContentRequest(BaseModel):
 @app.get("/")
 async def root():
     try:
-        return {"status": "success", "message": "Content Generator API is running"}
+        logger.info("Root endpoint accessed")
+        return {
+            "status": "success",
+            "message": "Content Generator API is running",
+            "environment": os.getenv("VERCEL_ENV", "local"),
+            "python_version": sys.version
+        }
     except Exception as e:
         logger.error(f"Error in root endpoint: {str(e)}")
         return {"status": "error", "message": str(e)}
@@ -61,16 +74,25 @@ async def root():
 @app.get("/test")
 async def test():
     try:
+        logger.info("Test endpoint accessed")
+        env_vars = {
+            "VERCEL_ENV": os.getenv("VERCEL_ENV", "not set"),
+            "PYTHON_VERSION": sys.version,
+            "OPENAI_API_KEY_SET": bool(api_key)
+        }
+        logger.info(f"Environment variables: {json.dumps(env_vars)}")
+        
         if not api_key:
-            raise ValueError("OpenAI API key not configured")
+            raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+        
         return {
             "status": "success",
             "message": "API is working correctly",
-            "openai_key_configured": bool(api_key)
+            "environment": env_vars
         }
     except Exception as e:
         logger.error(f"Error in test endpoint: {str(e)}")
-        return {"status": "error", "message": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/generate-content")
 async def generate_content(
@@ -83,9 +105,10 @@ async def generate_content(
 ):
     try:
         logger.info(f"Received request for {platform} content")
+        logger.info(f"Product description: {product_description[:50]}...")
         
         if not api_key:
-            raise ValueError("OpenAI API key not configured")
+            raise HTTPException(status_code=500, detail="OpenAI API key not configured")
 
         prompt = f"""Create engaging content for a product with the following details:
 Product Description: {product_description}
@@ -116,15 +139,15 @@ Please create content that:
             "content": response.choices[0].message.content
         }
 
-    except ValueError as ve:
-        logger.error(f"Validation error: {str(ve)}")
-        return {"status": "error", "message": str(ve)}
+    except HTTPException as he:
+        logger.error(f"HTTP error: {str(he)}")
+        raise he
     except openai.error.OpenAIError as oe:
         logger.error(f"OpenAI API error: {str(oe)}")
-        return {"status": "error", "message": str(oe)}
+        raise HTTPException(status_code=500, detail=str(oe))
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
-        return {"status": "error", "message": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
