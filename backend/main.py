@@ -39,9 +39,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Set up handler for AWS Lambda/Vercel
-handler = Mangum(app)
-
 # Set your OpenAI API key
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
@@ -69,7 +66,7 @@ async def root():
         }
     except Exception as e:
         logger.error(f"Error in root endpoint: {str(e)}")
-        return {"status": "error", "message": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/test")
 async def test():
@@ -148,6 +145,9 @@ Please create content that:
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Handler for AWS Lambda/Vercel
+handler = Mangum(app, lifespan="off")
 
 if __name__ == "__main__":
     import uvicorn
