@@ -6,17 +6,6 @@ import openai
 import os
 from dotenv import load_dotenv
 from mangum import Mangum
-import logging
-import sys
-import json
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    stream=sys.stdout
-)
-logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -35,11 +24,7 @@ app.add_middleware(
 
 # Set OpenAI API key
 api_key = os.getenv("OPENAI_API_KEY")
-if not api_key:
-    logger.error("OpenAI API key not found")
-else:
-    openai.api_key = api_key
-    logger.info("OpenAI API key loaded successfully")
+openai.api_key = api_key
 
 class ContentRequest(BaseModel):
     image_url: Optional[str] = None
@@ -71,10 +56,10 @@ async def generate_content(
     platform: str = Form(...),
     image_url: Optional[str] = Form(None)
 ):
-    try:
-        if not api_key:
-            raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
 
+    try:
         prompt = f"""Create engaging content for a product with the following details:
 Product Description: {product_description}
 Target Audience: {gender}s in {age_group} age group
@@ -103,7 +88,6 @@ Please create content that:
         }
 
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Create handler for AWS Lambda
