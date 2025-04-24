@@ -71,7 +71,7 @@ npm start
 
 ### Backend Deployment
 
-You can deploy the backend to platforms like Heroku, DigitalOcean, or AWS:
+You can deploy the backend to platforms like Vercel, DigitalOcean, or AWS:
 
 1. Create a Procfile in the backend directory:
 ```
