@@ -11,14 +11,5 @@
             "src": "/(.*)",
             "dest": "main.py"
         }
-    ],
-    "env": {
-        "APP_MODULE": "main:app"
-    },
-    "functions": {
-        "api/**/*.py": {
-            "memory": 1024,
-            "maxDuration": 10
-        }
-    }
+    ]
 } 
