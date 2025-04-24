@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
@@ -14,6 +14,20 @@ function App() {
   const [generatedContent, setGeneratedContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+      setFormData(prev => ({ ...prev, image_url: '' })); // Clear image URL when file is selected
+    }
+  };
+
+  const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedFile(null); // Clear selected file when URL is entered
+    setFormData(prev => ({ ...prev, image_url: e.target.value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,9 +36,19 @@ function App() {
 
     try {
       const formDataObj = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        formDataObj.append(key, value);
-      });
+      
+      // Add file if selected, otherwise add image URL
+      if (selectedFile) {
+        formDataObj.append('file', selectedFile);
+      } else if (formData.image_url) {
+        formDataObj.append('image_url', formData.image_url);
+      }
+
+      // Add other form data
+      formDataObj.append('product_description', formData.product_description);
+      formDataObj.append('gender', formData.gender);
+      formDataObj.append('age_group', formData.age_group);
+      formDataObj.append('platform', formData.platform);
 
       const response = await axios.post(`${API_URL}/api/generate-content`, formDataObj, {
         headers: {
@@ -61,14 +85,49 @@ function App() {
                 <h2 className="text-2xl font-bold mb-8 text-center text-gray-900">AI Content Generator</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
+                    <label className="block text-sm font-medium text-gray-700">Image Upload</label>
+                    <div className="mt-1 flex items-center space-x-4">
+                      <input
+                        type="file"
+                        onChange={handleFileSelect}
+                        accept="image/*"
+                        ref={fileInputRef}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                      >
+                        Choose File
+                      </button>
+                      {selectedFile && (
+                        <span className="text-sm text-gray-500">{selectedFile.name}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="- or -">
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-300"></div>
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-white text-gray-500">Or</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
                     <label className="block text-sm font-medium text-gray-700">Image URL</label>
                     <input
                       type="text"
                       name="image_url"
                       value={formData.image_url}
-                      onChange={handleChange}
+                      onChange={handleImageUrlChange}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                       placeholder="https://example.com/image.jpg"
+                      disabled={!!selectedFile}
                     />
                   </div>
 
