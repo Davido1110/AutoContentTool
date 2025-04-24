@@ -1,65 +1,49 @@
-from fastapi import FastAPI, UploadFile, Form, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import openai
 import os
 from dotenv import load_dotenv
-from mangum import Mangum
 
 # Load environment variables
 load_dotenv()
 
-# Initialize FastAPI app
-app = FastAPI()
-
-# Enable CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Initialize Flask app
+app = Flask(__name__)
+CORS(app)
 
 # Set OpenAI API key
 api_key = os.getenv("OPENAI_API_KEY")
 openai.api_key = api_key
 
-class ContentRequest(BaseModel):
-    image_url: Optional[str] = None
-    product_description: str
-    gender: str
-    age_group: str
-    platform: str
-
-@app.get("/")
+@app.route("/", methods=["GET"])
 def root():
-    return {"message": "Content Generator API is running"}
+    return jsonify({"message": "Content Generator API is running"})
 
-@app.get("/test")
+@app.route("/test", methods=["GET"])
 def test():
     if not api_key:
-        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
-    return {
+        return jsonify({"error": "OpenAI API key not configured"}), 500
+    return jsonify({
         "status": "success",
         "message": "API is working correctly",
         "openai_key_configured": bool(api_key)
-    }
+    })
 
-@app.post("/api/generate-content")
-async def generate_content(
-    file: Optional[UploadFile] = File(None),
-    product_description: str = Form(...),
-    gender: str = Form(...),
-    age_group: str = Form(...),
-    platform: str = Form(...),
-    image_url: Optional[str] = Form(None)
-):
+@app.route("/api/generate-content", methods=["POST"])
+def generate_content():
     if not api_key:
-        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+        return jsonify({"error": "OpenAI API key not configured"}), 500
 
     try:
+        # Get form data
+        product_description = request.form.get("product_description")
+        gender = request.form.get("gender")
+        age_group = request.form.get("age_group")
+        platform = request.form.get("platform")
+        
+        if not all([product_description, gender, age_group, platform]):
+            return jsonify({"error": "Missing required fields"}), 400
+
         prompt = f"""Create engaging content for a product with the following details:
 Product Description: {product_description}
 Target Audience: {gender}s in {age_group} age group
@@ -82,17 +66,17 @@ Please create content that:
             max_tokens=500
         )
 
-        return {
+        return jsonify({
             "status": "success",
             "content": response.choices[0].message.content
-        }
+        })
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return jsonify({"error": str(e)}), 500
 
-# Create handler for AWS Lambda
-handler = Mangum(app)
-
+# For local development
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    app.run(host="0.0.0.0", port=8000)
+
+# For Vercel
+app = app 
