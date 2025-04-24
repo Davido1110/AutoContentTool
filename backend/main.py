@@ -14,10 +14,15 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Load environment variables
 load_dotenv()
 
-app = FastAPI()
-handler = Mangum(app)
+# Initialize FastAPI app
+app = FastAPI(
+    title="Content Generator API",
+    description="API for generating content using OpenAI",
+    version="1.0.0"
+)
 
 # Enable CORS
 app.add_middleware(
@@ -28,10 +33,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Set up handler for AWS Lambda/Vercel
+handler = Mangum(app)
+
 # Set your OpenAI API key
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     logger.error("OpenAI API key not found in environment variables")
+    raise ValueError("OpenAI API key not found")
 else:
     openai.api_key = api_key
     logger.info("OpenAI API key loaded successfully")
@@ -46,16 +55,13 @@ class ContentRequest(BaseModel):
 def analyze_image(image_url: Optional[str] = None, image_file: Optional[UploadFile] = None) -> str:
     try:
         if image_file:
-            # Read the uploaded file
             image_content = image_file.file.read()
-            # You can implement image analysis here using OpenAI's Vision API or other services
             return "Image successfully uploaded and analyzed."
         elif image_url:
-            # You can implement image URL analysis here
             return "Image URL successfully analyzed."
         return ""
     except Exception as e:
-        print(f"Error analyzing image: {str(e)}")
+        logger.error(f"Error analyzing image: {str(e)}")
         return ""
 
 def generate_content_prompt(request: ContentRequest, image_analysis: str = "") -> str:
@@ -91,6 +97,10 @@ Please create content that:
 
 Format the content appropriately for {request.platform}, including line breaks and sections as needed."""
 
+@app.get("/")
+async def root():
+    return {"message": "Content Generator API is running"}
+
 @app.post("/api/generate-content")
 async def generate_content(
     file: Optional[UploadFile] = File(None),
@@ -102,14 +112,7 @@ async def generate_content(
 ):
     try:
         logger.info(f"Received request - Platform: {platform}, Gender: {gender}, Age Group: {age_group}")
-        logger.info(f"Product Description: {product_description[:100]}...")
         
-        if file:
-            logger.info(f"File received: {file.filename}")
-        if image_url:
-            logger.info(f"Image URL received: {image_url}")
-
-        # Create request object
         request = ContentRequest(
             image_url=image_url,
             product_description=product_description,
@@ -118,21 +121,12 @@ async def generate_content(
             platform=platform
         )
 
-        # Analyze image if provided
         image_analysis = analyze_image(image_url=image_url, image_file=file)
         logger.info("Image analysis completed")
 
-        # Generate the prompt
         prompt = generate_content_prompt(request, image_analysis)
-        logger.info("Prompt generated successfully")
-        logger.debug(f"Generated prompt: {prompt}")
+        logger.info("Prompt generated")
 
-        # Verify API key before making the call
-        if not openai.api_key:
-            raise ValueError("OpenAI API key is not set")
-
-        logger.info("Making request to OpenAI API...")
-        # Call OpenAI API
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
@@ -142,33 +136,20 @@ async def generate_content(
             temperature=0.7,
             max_tokens=1000
         )
-        logger.info("Received response from OpenAI API")
+        logger.info("Received response from OpenAI")
 
         generated_content = response.choices[0].message.content
-        logger.info("Content generated successfully")
 
         return {
             "status": "success",
             "content": generated_content
         }
 
-    except ValueError as ve:
-        logger.error(f"Validation error: {str(ve)}")
-        return {
-            "status": "error",
-            "message": f"Configuration error: {str(ve)}"
-        }
-    except openai.error.OpenAIError as oe:
-        logger.error(f"OpenAI API error: {str(oe)}")
-        return {
-            "status": "error",
-            "message": f"OpenAI API error: {str(oe)}"
-        }
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
+        logger.error(f"Error generating content: {str(e)}", exc_info=True)
         return {
             "status": "error",
-            "message": f"An unexpected error occurred: {str(e)}"
+            "message": str(e)
         }
 
 if __name__ == "__main__":
