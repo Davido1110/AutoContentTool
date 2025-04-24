@@ -8,6 +8,11 @@ from dotenv import load_dotenv
 import requests
 from io import BytesIO
 from mangum import Mangum
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -24,7 +29,12 @@ app.add_middleware(
 )
 
 # Set your OpenAI API key
-openai.api_key = os.getenv("OPENAI_API_KEY")
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    logger.error("OpenAI API key not found in environment variables")
+else:
+    openai.api_key = api_key
+    logger.info("OpenAI API key loaded successfully")
 
 class ContentRequest(BaseModel):
     image_url: Optional[str] = None
@@ -91,6 +101,14 @@ async def generate_content(
     image_url: Optional[str] = Form(None)
 ):
     try:
+        logger.info(f"Received request - Platform: {platform}, Gender: {gender}, Age Group: {age_group}")
+        logger.info(f"Product Description: {product_description[:100]}...")
+        
+        if file:
+            logger.info(f"File received: {file.filename}")
+        if image_url:
+            logger.info(f"Image URL received: {image_url}")
+
         # Create request object
         request = ContentRequest(
             image_url=image_url,
@@ -102,10 +120,18 @@ async def generate_content(
 
         # Analyze image if provided
         image_analysis = analyze_image(image_url=image_url, image_file=file)
+        logger.info("Image analysis completed")
 
         # Generate the prompt
         prompt = generate_content_prompt(request, image_analysis)
+        logger.info("Prompt generated successfully")
+        logger.debug(f"Generated prompt: {prompt}")
 
+        # Verify API key before making the call
+        if not openai.api_key:
+            raise ValueError("OpenAI API key is not set")
+
+        logger.info("Making request to OpenAI API...")
         # Call OpenAI API
         response = openai.ChatCompletion.create(
             model="gpt-4",
@@ -116,18 +142,33 @@ async def generate_content(
             temperature=0.7,
             max_tokens=1000
         )
+        logger.info("Received response from OpenAI API")
 
         generated_content = response.choices[0].message.content
+        logger.info("Content generated successfully")
 
         return {
             "status": "success",
             "content": generated_content
         }
 
-    except Exception as e:
+    except ValueError as ve:
+        logger.error(f"Validation error: {str(ve)}")
         return {
             "status": "error",
-            "message": str(e)
+            "message": f"Configuration error: {str(ve)}"
+        }
+    except openai.error.OpenAIError as oe:
+        logger.error(f"OpenAI API error: {str(oe)}")
+        return {
+            "status": "error",
+            "message": f"OpenAI API error: {str(oe)}"
+        }
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
+        return {
+            "status": "error",
+            "message": f"An unexpected error occurred: {str(e)}"
         }
 
 if __name__ == "__main__":

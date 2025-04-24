@@ -50,19 +50,40 @@ function App() {
       formDataObj.append('age_group', formData.age_group);
       formDataObj.append('platform', formData.platform);
 
+      console.log('Sending request to:', `${API_URL}/api/generate-content`);
+      console.log('Form data:', Object.fromEntries(formDataObj.entries()));
+
       const response = await axios.post(`${API_URL}/api/generate-content`, formDataObj, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
+      console.log('Response:', response.data);
+
       if (response.data.status === 'success') {
         setGeneratedContent(response.data.content);
       } else {
-        setError(response.data.message || 'An error occurred');
+        setError(response.data.message || 'An error occurred while generating content');
       }
-    } catch (err) {
-      setError('Failed to generate content. Please try again.');
+    } catch (err: any) {
+      console.error('Error details:', err);
+      let errorMessage = 'Failed to generate content. ';
+      
+      if (err.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.error('Error response:', err.response.data);
+        errorMessage += err.response.data.message || err.response.data || err.message;
+      } else if (err.request) {
+        // The request was made but no response was received
+        errorMessage += 'No response received from server. Please check your connection.';
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        errorMessage += err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
