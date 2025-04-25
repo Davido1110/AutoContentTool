@@ -57,8 +57,10 @@ function App() {
       if (axios.isAxiosError(error)) {
         const errorMessage = error.response?.data?.message || "Lỗi khi lấy thông tin sản phẩm";
         toast.error(errorMessage);
+        console.error("API Error:", error.response?.data);
       } else {
         toast.error("Đã xảy ra lỗi không xác định");
+        console.error("Unknown Error:", error);
       }
     } finally {
       setIsFetchingDescription(false);
@@ -83,12 +85,6 @@ function App() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.productLink) {
-      toast.error("Vui lòng nhập link sản phẩm");
-      return;
-    }
-    
     setLoading(true);
     setError('');
     
@@ -104,14 +100,22 @@ function App() {
       
       if (response.data.status === "success" && response.data.content) {
         setGeneratedContent(response.data.content);
+        toast.success("Đã tạo nội dung thành công!");
       } else {
         setError("Phản hồi không hợp lệ từ API");
+        toast.error("Không thể tạo nội dung");
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        setError(error.response?.data?.error || "Lỗi kết nối đến API");
+        const errorMessage = error.response?.data?.error || "Lỗi kết nối đến API";
+        setError(errorMessage);
+        toast.error(errorMessage);
+        console.error("API Error:", error.response?.data);
       } else {
-        setError("Đã xảy ra lỗi không xác định");
+        const errorMessage = "Đã xảy ra lỗi không xác định";
+        setError(errorMessage);
+        toast.error(errorMessage);
+        console.error("Unknown Error:", error);
       }
     } finally {
       setLoading(false);
