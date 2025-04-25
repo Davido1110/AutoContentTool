@@ -37,6 +37,7 @@ def generate_content():
     try:
         # Get form data
         product_description = request.form.get("product_description")
+        product_link = request.form.get("product_link", "https://leonardo.vn")  # Default to leonardo.vn if no link provided
         gender = request.form.get("gender")
         age_group = request.form.get("age_group")
         platform = request.form.get("platform")
@@ -85,7 +86,7 @@ CN6: 424 Trương Công Định, Phường 8, VT
 CN7: 552 Phạm Văn Thuận, P. Tam Hiệp, TP. Biên Hòa"""
 
         prompt = f"""Hãy viết cho tôi nội dung quảng cáo sáng tạo cho sản phẩm dựa vào thông tin sau:
-- Link sản phẩm: https://leonardo.vn
+- Link sản phẩm: {product_link}
 - Mô tả sản phẩm: {product_description}
 - Khách hàng mục tiêu: {gender_vn}, độ tuổi {age_group_vn}
 - Content dùng cho nền tảng: {platform}"""
