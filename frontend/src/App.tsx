@@ -3,7 +3,24 @@ import axios from 'axios';
 import { ClipboardIcon } from '@heroicons/react/24/outline';
 import { toast, Toaster } from 'react-hot-toast';
 
-const API_URL = 'https://auto-content-tool-c7qx.vercel.app/api';
+const API_URL = process.env.REACT_APP_API_URL || 'https://auto-content-tool-c7qx.vercel.app';
+
+// Hàm chuẩn hóa URL Leonardo
+const normalizeLeonardoUrl = (url: string): string => {
+  let normalizedUrl = url.trim();
+  
+  // Thêm https:// nếu không có
+  if (!normalizedUrl.startsWith('http')) {
+    normalizedUrl = 'https://' + normalizedUrl;
+  }
+  
+  // Thêm www nếu không có
+  if (!normalizedUrl.includes('www.')) {
+    normalizedUrl = normalizedUrl.replace('https://', 'https://www.');
+  }
+  
+  return normalizedUrl;
+};
 
 interface FormState {
   productDescription: string;
@@ -39,16 +56,21 @@ function App() {
       setIsFetchingDescription(true);
       setError('');
       
-      let normalizedUrl = url.trim();
-      if (!normalizedUrl.startsWith('http')) {
-        normalizedUrl = 'https://' + normalizedUrl;
-      }
+      const normalizedUrl = normalizeLeonardoUrl(url);
+      console.log('Normalized URL:', normalizedUrl);
       
-      const formData = new FormData();
+      const formData = new URLSearchParams();
       formData.append("product_url", normalizedUrl);
       
-      console.log('Fetching product from URL:', normalizedUrl);
-      const response = await axios.post(`${API_URL}/fetch-product`, formData);
+      console.log('Sending request to:', `${API_URL}/api/fetch-product`);
+      console.log('With URL:', normalizedUrl);
+      
+      const response = await axios.post(`${API_URL}/api/fetch-product`, formData, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+      
       console.log('API Response:', response.data);
       
       if (response.data.status === "success") {
@@ -68,7 +90,10 @@ function App() {
         console.error("API Error:", {
           status: error.response?.status,
           data: error.response?.data,
-          headers: error.response?.headers
+          headers: error.response?.headers,
+          url: error.config?.url,
+          method: error.config?.method,
+          data: error.config?.data
         });
       } else {
         toast.error("Đã xảy ra lỗi không xác định");
@@ -110,16 +135,20 @@ function App() {
     setLoading(true);
     setError('');
     
-    const formDataToSend = new FormData();
+    const formDataToSend = new URLSearchParams();
     formDataToSend.append("product_description", formData.productDescription);
-    formDataToSend.append("product_link", formData.productLink);
+    formDataToSend.append("product_link", normalizeLeonardoUrl(formData.productLink));
     formDataToSend.append("gender", formData.gender);
     formDataToSend.append("age_group", formData.ageGroup);
     formDataToSend.append("platform", formData.platform);
 
     try {
       console.log('Sending data to API:', Object.fromEntries(formDataToSend));
-      const response = await axios.post(`${API_URL}/generate-content`, formDataToSend);
+      const response = await axios.post(`${API_URL}/api/generate-content`, formDataToSend, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
       console.log('API Response:', response.data);
       
       if (response.data.status === "success" && response.data.content) {
@@ -138,7 +167,10 @@ function App() {
         console.error("API Error:", {
           status: error.response?.status,
           data: error.response?.data,
-          headers: error.response?.headers
+          headers: error.response?.headers,
+          url: error.config?.url,
+          method: error.config?.method,
+          data: error.config?.data
         });
       } else {
         const errorMessage = "Đã xảy ra lỗi không xác định";
