@@ -7,6 +7,7 @@ const API_URL = 'https://auto-content-tool-c7qx.vercel.app';
 
 interface FormState {
   productDescription: string;
+  productLink: string;
   gender: string;
   ageGroup: string;
   platform: string;
@@ -15,6 +16,7 @@ interface FormState {
 function App() {
   const [formData, setFormData] = useState<FormState>({
     productDescription: '',
+    productLink: '',
     gender: 'male',
     ageGroup: '18-22',
     platform: 'facebook'
@@ -38,6 +40,9 @@ function App() {
     
     const formDataToSend = new FormData();
     formDataToSend.append("product_description", formData.productDescription);
+    if (formData.productLink) {
+      formDataToSend.append("product_link", formData.productLink);
+    }
     formDataToSend.append("gender", formData.gender);
     formDataToSend.append("age_group", formData.ageGroup);
     formDataToSend.append("platform", formData.platform);
@@ -82,6 +87,20 @@ function App() {
                   required
                   rows={4}
                   placeholder="Nhập mô tả chi tiết về sản phẩm của bạn..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Link sản phẩm (không bắt buộc)
+                </label>
+                <input
+                  type="url"
+                  name="productLink"
+                  value={formData.productLink}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="https://..."
                 />
               </div>
 
