@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { ClipboardIcon } from '@heroicons/react/24/outline';
 import { toast, Toaster } from 'react-hot-toast';
@@ -24,6 +24,7 @@ function App() {
   const [generatedContent, setGeneratedContent] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isFetchingDescription, setIsFetchingDescription] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -32,6 +33,48 @@ function App() {
       [name]: value
     }));
   };
+
+  const fetchProductDescription = async (url: string) => {
+    try {
+      setIsFetchingDescription(true);
+      setError('');
+      
+      const formData = new FormData();
+      formData.append("product_url", url);
+      
+      const response = await axios.post(`${API_URL}/api/fetch-product`, formData);
+      
+      if (response.data.status === "success") {
+        setFormData(prev => ({
+          ...prev,
+          productDescription: response.data.description
+        }));
+        toast.success("Đã tự động điền thông tin sản phẩm!");
+      } else {
+        toast.error(response.data.message || "Không thể lấy thông tin sản phẩm");
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const errorMessage = error.response?.data?.message || "Lỗi khi lấy thông tin sản phẩm";
+        toast.error(errorMessage);
+      } else {
+        toast.error("Đã xảy ra lỗi không xác định");
+      }
+    } finally {
+      setIsFetchingDescription(false);
+    }
+  };
+
+  // Thêm useEffect để tự động fetch khi có URL hợp lệ
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (formData.productLink && formData.productLink.includes('leonardo.vn')) {
+        fetchProductDescription(formData.productLink);
+      }
+    }, 1000); // Đợi 1 giây sau khi người dùng ngừng gõ
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.productLink]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +120,27 @@ function App() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Link sản phẩm (không bắt buộc)
+                </label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    name="productLink"
+                    value={formData.productLink}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="https://..."
+                  />
+                  {isFetchingDescription && (
+                    <div className="absolute right-2 top-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500"></div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Mô tả sản phẩm
                 </label>
                 <textarea
@@ -87,20 +151,6 @@ function App() {
                   required
                   rows={4}
                   placeholder="Nhập mô tả chi tiết về sản phẩm của bạn..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Link sản phẩm (không bắt buộc)
-                </label>
-                <input
-                  type="url"
-                  name="productLink"
-                  value={formData.productLink}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="https://..."
                 />
               </div>
 
@@ -151,12 +201,12 @@ function App() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || isFetchingDescription}
                 className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                  loading ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'
+                  loading || isFetchingDescription ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'
                 } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200`}
               >
-                {loading ? 'Đang tạo...' : 'Tạo nội dung'}
+                {loading ? 'Đang tạo...' : isFetchingDescription ? 'Đang lấy thông tin...' : 'Tạo nội dung'}
               </button>
 
               {error && (
