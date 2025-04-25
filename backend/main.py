@@ -47,7 +47,7 @@ def fetch_product():
     try:
         # Nhận URL từ frontend
         product_url = request.form.get("product_url")
-        print(f"Received URL: {product_url}")  # Debug log
+        print(f"Received URL: {product_url}")
         
         if not product_url:
             return jsonify({
@@ -67,30 +67,65 @@ def fetch_product():
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         
-        print(f"Sending request to: {product_url}")  # Debug log
-        # Gửi request đến trang sản phẩm
+        print(f"Sending request to: {product_url}")
         response = requests.get(product_url, headers=headers, timeout=10)
         response.raise_for_status()
         
         # Parse HTML bằng BeautifulSoup
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response.text, 'lxml')
         
         # Tìm phần mô tả sản phẩm
         product_info = []
         
-        # Tìm mô tả chính
-        main_description = soup.find('div', {'class': 'product-description'})
+        # Tìm mô tả chính - thử nhiều cách khác nhau
+        description_selectors = [
+            'div[class*="product-description"]',  # Class chứa product-description
+            'div[class*="description"]',          # Class chứa description
+            'div[itemprop="description"]',        # Thuộc tính itemprop
+            '.product__description',              # Class product__description
+            '#product-description'                # ID product-description
+        ]
+        
+        main_description = None
+        for selector in description_selectors:
+            main_description = soup.select_one(selector)
+            if main_description:
+                break
+                
         if main_description:
-            product_info.append(main_description.get_text().strip())
-            
+            description_text = main_description.get_text().strip()
+            if description_text:
+                product_info.append(description_text)
+                
         # Tìm thông tin chi tiết sản phẩm
-        product_details = soup.find_all('li', string=re.compile(r'(Chất liệu|Size|Đổi size|Mẹo sử dụng)'))
-        if product_details:
-            for detail in product_details:
-                product_info.append(detail.get_text().strip())
+        detail_selectors = [
+            'li:contains("Chất liệu")',
+            'li:contains("Size")',
+            'li:contains("Kích thước")',
+            'li:contains("Đổi size")',
+            'li:contains("Mẹo sử dụng")',
+            'div[class*="product-details"]'
+        ]
+        
+        for selector in detail_selectors:
+            details = soup.find_all(string=re.compile(r'(Chất liệu|Size|Kích thước|Đổi size|Mẹo sử dụng)'))
+            for detail in details:
+                if detail.parent.name == 'li' or detail.parent.name == 'div':
+                    detail_text = detail.parent.get_text().strip()
+                    if detail_text and detail_text not in product_info:
+                        product_info.append(detail_text)
                 
         if not product_info:
-            print("No product information found")  # Debug log
+            # Thử tìm bất kỳ đoạn văn bản có ý nghĩa nào
+            potential_descriptions = soup.find_all(['p', 'div'], class_=lambda x: x and ('description' in x.lower() or 'detail' in x.lower()))
+            for desc in potential_descriptions:
+                text = desc.get_text().strip()
+                if len(text) > 50:  # Chỉ lấy đoạn văn có ý nghĩa
+                    product_info.append(text)
+                    break
+                    
+        if not product_info:
+            print("No product information found")
             return jsonify({
                 "status": "error",
                 "message": "Không tìm thấy thông tin sản phẩm"
@@ -98,7 +133,7 @@ def fetch_product():
             
         # Kết hợp tất cả thông tin
         description = "\n".join(product_info)
-        print(f"Found description: {description[:100]}...")  # Debug log
+        print(f"Found description: {description[:100]}...")
         
         return jsonify({
             "status": "success",
@@ -106,19 +141,19 @@ def fetch_product():
         })
         
     except requests.Timeout:
-        print("Request timeout")  # Debug log
+        print("Request timeout")
         return jsonify({
             "status": "error",
             "message": "Timeout khi kết nối đến server"
         }), 504
     except requests.RequestException as e:
-        print(f"Request exception: {str(e)}")  # Debug log
+        print(f"Request exception: {str(e)}")
         return jsonify({
             "status": "error",
             "message": f"Lỗi khi lấy thông tin sản phẩm: {str(e)}"
         }), 500
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")  # Debug log
+        print(f"Unexpected error: {str(e)}")
         return jsonify({
             "status": "error",
             "message": f"Lỗi không xác định: {str(e)}"
