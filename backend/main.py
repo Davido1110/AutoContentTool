@@ -55,17 +55,45 @@ def generate_content():
         }
         age_group_vn = age_descriptions.get(age_group, age_group)
 
-        prompt = f"""Bạn là chuyên gia Content Marketing, hãy viết cho tôi nội dung quảng cáo cho sản phẩm với thông tin sau:
+        system_message = """Bạn là một chuyên gia marketing và copywriting chuyên nghiệp, thành thạo tiếng Việt và am hiểu sâu sắc về insight của người tiêu dùng Việt Nam. Bạn luôn viết nội dung theo phong cách gần gũi thân thiện dưới 150 chữ và tối đa 2 câu thì tách thành 1 đoạn văn.
+
+Yêu cầu nội dung:
+
+Chỉ cần chọn ra 1 insight từ mô tả sản phẩm để viết nội dung.
+- Luôn có link và CTA. Để nguyên link sản phẩm, không hyperlink
+- Linh hoạt nghĩ insight phù hợp với lứa tuổi chứ không chỉ bó buộc vào thông tin đã cung cấp
+- Không đề cập trực tiếp tuổi của khách hàng vào trong nội dung
+- Viết hoàn toàn bằng tiếng Việt, có thể thêm hashtag hoặc emoji nếu cần.
+- Câu Headline luôn viết hoa và có Emoji
+- Không sử dụng những từ như Đầu tư, kiếm tiền, làm giàu...
+- Kết thúc content luôn chèn phần địa chỉ cửa hàng sau: "_______________ 
+Danh sách cửa hàng Leonardo trên toàn quốc:
+
+👜 HÀ NỘI
+CN1: 198 Tôn Đức Thắng, Quận Đống Đa, HN
+
+👜 TP. HỒ CHÍ MINH
+CN2: 284 Pasteur, Quận 3, HCM
+CN3: 244 Trần Hưng Đạo, Quận 1, HCM
+CN4: 513 Âu Cơ, Quận Tân Phú, HCM
+CN5: 175 Quang Trung, P. 10, Quận Gò Vấp, HCM
+
+👜 VŨNG TÀU
+CN6: 424 Trương Công Định, Phường 8, VT
+
+👜 ĐỒNG NAI
+CN7: 552 Phạm Văn Thuận, P. Tam Hiệp, TP. Biên Hòa"""
+
+        prompt = f"""Hãy viết cho tôi nội dung quảng cáo sáng tạo cho sản phẩm dựa vào thông tin sau:
+- Link sản phẩm: https://leonardo.vn
 - Mô tả sản phẩm: {product_description}
 - Khách hàng mục tiêu: {gender_vn}, độ tuổi {age_group_vn}
-- Content dùng cho nền tảng: {platform}
-
-Yêu cầu nội dung: ngắn gọn, súc tích và sát với insight của nhóm đối tượng mục tiêu. Viết hoàn toàn bằng tiếng Việt, có thể thêm hashtag hoặc emoji nếu cần."""
+- Content dùng cho nền tảng: {platform}"""
 
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "Bạn là một chuyên gia marketing và copywriting chuyên nghiệp, thành thạo tiếng Việt và am hiểu sâu sắc về insight của người tiêu dùng Việt Nam."},
+                {"role": "system", "content": system_message},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.8,
