@@ -71,8 +71,8 @@ def fetch_product():
         response = requests.get(product_url, headers=headers, timeout=10)
         response.raise_for_status()
         
-        # Parse HTML bằng BeautifulSoup
-        soup = BeautifulSoup(response.text, 'lxml')
+        # Parse HTML bằng BeautifulSoup với html5lib parser
+        soup = BeautifulSoup(response.text, 'html5lib')
         
         # Tìm phần mô tả sản phẩm
         product_info = []
