@@ -65,27 +65,30 @@ function App() {
     }
   };
 
-  // Thêm useEffect để tự động fetch khi có URL hợp lệ
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (formData.productLink && formData.productLink.includes('leonardo.vn')) {
         fetchProductDescription(formData.productLink);
       }
-    }, 1000); // Đợi 1 giây sau khi người dùng ngừng gõ
+    }, 1000);
 
     return () => clearTimeout(timeoutId);
   }, [formData.productLink]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.productLink) {
+      toast.error("Vui lòng nhập link sản phẩm");
+      return;
+    }
+    
     setLoading(true);
     setError('');
     
     const formDataToSend = new FormData();
     formDataToSend.append("product_description", formData.productDescription);
-    if (formData.productLink) {
-      formDataToSend.append("product_link", formData.productLink);
-    }
+    formDataToSend.append("product_link", formData.productLink);
     formDataToSend.append("gender", formData.gender);
     formDataToSend.append("age_group", formData.ageGroup);
     formDataToSend.append("platform", formData.platform);
@@ -120,7 +123,7 @@ function App() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Link sản phẩm (không bắt buộc)
+                  Link sản phẩm
                 </label>
                 <div className="relative">
                   <input
@@ -130,6 +133,7 @@ function App() {
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     placeholder="https://..."
+                    required
                   />
                   {isFetchingDescription && (
                     <div className="absolute right-2 top-2">
@@ -137,21 +141,6 @@ function App() {
                     </div>
                   )}
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mô tả sản phẩm
-                </label>
-                <textarea
-                  name="productDescription"
-                  value={formData.productDescription}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  required
-                  rows={4}
-                  placeholder="Nhập mô tả chi tiết về sản phẩm của bạn..."
-                />
               </div>
 
               <div>
