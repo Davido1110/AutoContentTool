@@ -23,8 +23,6 @@ function App() {
 
     try {
       const formDataObj = new FormData();
-
-      // Add form data
       formDataObj.append('product_description', formData.product_description);
       formDataObj.append('gender', formData.gender);
       formDataObj.append('age_group', formData.age_group);
@@ -41,10 +39,11 @@ function App() {
 
       console.log('Phản hồi:', response.data);
 
-      if (response.data.status === 'success') {
+      if (response.data.status === 'success' && Array.isArray(response.data.contents)) {
         setGeneratedContents(response.data.contents);
       } else {
-        setError(response.data.error || 'Đã xảy ra lỗi khi tạo nội dung');
+        setError(response.data.error || 'Định dạng phản hồi không hợp lệ');
+        console.error('Phản hồi không hợp lệ:', response.data);
       }
     } catch (err: any) {
       console.error('Chi tiết lỗi:', err);
@@ -52,7 +51,7 @@ function App() {
       
       if (err.response) {
         console.error('Phản hồi lỗi:', err.response.data);
-        errorMessage += err.response.data.error || err.response.data || err.message;
+        errorMessage += err.response.data.error || err.response.data.message || err.message;
       } else if (err.request) {
         errorMessage += 'Không nhận được phản hồi từ máy chủ. Vui lòng kiểm tra kết nối.';
       } else {
@@ -167,7 +166,7 @@ function App() {
                   </div>
                 )}
 
-                {generatedContents.length > 0 && (
+                {Array.isArray(generatedContents) && generatedContents.length > 0 && (
                   <div className="mt-6 space-y-6">
                     <h3 className="text-lg font-medium text-gray-900">Nội dung đã tạo:</h3>
                     {generatedContents.map((content, index) => (
