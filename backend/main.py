@@ -3,13 +3,23 @@ from flask_cors import CORS
 import openai
 import os
 from dotenv import load_dotenv
+import requests
+from bs4 import BeautifulSoup
+import re
 
 # Load environment variables
 load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)
+# Cấu hình CORS chi tiết hơn
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["https://frontend-alpha-sable-56.vercel.app", "http://localhost:3000"],
+        "methods": ["POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 # Set OpenAI API key
 api_key = os.getenv("OPENAI_API_KEY")
@@ -29,21 +39,120 @@ def test():
         "openai_key_configured": bool(api_key)
     })
 
-@app.route("/api/generate-content", methods=["POST"])
+@app.route("/api/fetch-product", methods=["POST", "OPTIONS"])
+def fetch_product():
+    if request.method == "OPTIONS":
+        return "", 204
+        
+    try:
+        # Nhận URL từ frontend
+        product_url = request.form.get("product_url")
+        print(f"Received URL: {product_url}")  # Debug log
+        
+        if not product_url:
+            return jsonify({
+                "status": "error",
+                "message": "Vui lòng cung cấp URL sản phẩm"
+            }), 400
+            
+        # Kiểm tra xem có phải URL của Leonardo không
+        if "leonardo.vn" not in product_url:
+            return jsonify({
+                "status": "error",
+                "message": "URL không hợp lệ. Chỉ hỗ trợ sản phẩm từ leonardo.vn"
+            }), 400
+            
+        # Thêm headers để giả lập trình duyệt
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
+        print(f"Sending request to: {product_url}")  # Debug log
+        # Gửi request đến trang sản phẩm
+        response = requests.get(product_url, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        # Parse HTML bằng BeautifulSoup
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Tìm phần mô tả sản phẩm
+        product_info = []
+        
+        # Tìm mô tả chính
+        main_description = soup.find('div', {'class': 'product-description'})
+        if main_description:
+            product_info.append(main_description.get_text().strip())
+            
+        # Tìm thông tin chi tiết sản phẩm
+        product_details = soup.find_all('li', string=re.compile(r'(Chất liệu|Size|Đổi size|Mẹo sử dụng)'))
+        if product_details:
+            for detail in product_details:
+                product_info.append(detail.get_text().strip())
+                
+        if not product_info:
+            print("No product information found")  # Debug log
+            return jsonify({
+                "status": "error",
+                "message": "Không tìm thấy thông tin sản phẩm"
+            }), 404
+            
+        # Kết hợp tất cả thông tin
+        description = "\n".join(product_info)
+        print(f"Found description: {description[:100]}...")  # Debug log
+        
+        return jsonify({
+            "status": "success",
+            "description": description
+        })
+        
+    except requests.Timeout:
+        print("Request timeout")  # Debug log
+        return jsonify({
+            "status": "error",
+            "message": "Timeout khi kết nối đến server"
+        }), 504
+    except requests.RequestException as e:
+        print(f"Request exception: {str(e)}")  # Debug log
+        return jsonify({
+            "status": "error",
+            "message": f"Lỗi khi lấy thông tin sản phẩm: {str(e)}"
+        }), 500
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")  # Debug log
+        return jsonify({
+            "status": "error",
+            "message": f"Lỗi không xác định: {str(e)}"
+        }), 500
+
+@app.route("/api/generate-content", methods=["POST", "OPTIONS"])
 def generate_content():
+    if request.method == "OPTIONS":
+        return "", 204
+        
     if not api_key:
         return jsonify({"error": "Chưa cấu hình OpenAI API key"}), 500
 
     try:
+        print("Received form data:", request.form)  # Debug log
+        
         # Get form data
         product_description = request.form.get("product_description")
-        product_link = request.form.get("product_link", "https://leonardo.vn")  # Default to leonardo.vn if no link provided
+        product_link = request.form.get("product_link", "https://leonardo.vn")
         gender = request.form.get("gender")
         age_group = request.form.get("age_group")
         platform = request.form.get("platform")
         
         if not all([product_description, gender, age_group, platform]):
-            return jsonify({"error": "Vui lòng điền đầy đủ thông tin"}), 400
+            missing_fields = []
+            if not product_description: missing_fields.append("product_description")
+            if not gender: missing_fields.append("gender")
+            if not age_group: missing_fields.append("age_group")
+            if not platform: missing_fields.append("platform")
+            
+            return jsonify({
+                "error": "Vui lòng điền đầy đủ thông tin",
+                "missing_fields": missing_fields
+            }), 400
 
         # Chuyển đổi gender sang tiếng Việt
         gender_vn = "nam" if gender == "male" else "nữ"
@@ -91,6 +200,8 @@ CN7: 552 Phạm Văn Thuận, P. Tam Hiệp, TP. Biên Hòa"""
 - Khách hàng mục tiêu: {gender_vn}, độ tuổi {age_group_vn}
 - Content dùng cho nền tảng: {platform}"""
 
+        print("Sending request to OpenAI with prompt:", prompt[:100])  # Debug log
+        
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
             messages=[
@@ -102,13 +213,21 @@ CN7: 552 Phạm Văn Thuận, P. Tam Hiệp, TP. Biên Hòa"""
         )
 
         content = response.choices[0].message.content.strip()
+        print("Received response from OpenAI:", content[:100])  # Debug log
 
         return jsonify({
             "status": "success",
             "content": content
         })
 
+    except openai.error.InvalidRequestError as e:
+        print(f"OpenAI InvalidRequestError: {str(e)}")  # Debug log
+        return jsonify({"error": f"Lỗi OpenAI API: {str(e)}"}), 400
+    except openai.error.AuthenticationError as e:
+        print(f"OpenAI AuthenticationError: {str(e)}")  # Debug log
+        return jsonify({"error": "Lỗi xác thực OpenAI API key"}), 401
     except Exception as e:
+        print(f"Unexpected error in generate_content: {str(e)}")  # Debug log
         return jsonify({"error": f"Lỗi: {str(e)}"}), 500
 
 # For local development
