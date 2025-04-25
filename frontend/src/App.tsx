@@ -87,13 +87,13 @@ function App() {
       if (axios.isAxiosError(error)) {
         const errorMessage = error.response?.data?.message || "Lỗi khi lấy thông tin sản phẩm";
         toast.error(errorMessage);
-        console.error("API Error:", {
+        console.error("API Error Details:", {
           status: error.response?.status,
-          data: error.response?.data,
-          headers: error.response?.headers,
-          url: error.config?.url,
-          method: error.config?.method,
-          data: error.config?.data
+          responseData: error.response?.data,
+          responseHeaders: error.response?.headers,
+          requestUrl: error.config?.url,
+          requestMethod: error.config?.method,
+          requestData: error.config?.data
         });
       } else {
         toast.error("Đã xảy ra lỗi không xác định");
@@ -164,13 +164,13 @@ function App() {
         const errorMessage = error.response?.data?.error || "Lỗi kết nối đến API";
         setError(errorMessage);
         toast.error(errorMessage);
-        console.error("API Error:", {
+        console.error("API Error Details:", {
           status: error.response?.status,
-          data: error.response?.data,
-          headers: error.response?.headers,
-          url: error.config?.url,
-          method: error.config?.method,
-          data: error.config?.data
+          responseData: error.response?.data,
+          responseHeaders: error.response?.headers,
+          requestUrl: error.config?.url,
+          requestMethod: error.config?.method,
+          requestData: error.config?.data
         });
       } else {
         const errorMessage = "Đã xảy ra lỗi không xác định";
