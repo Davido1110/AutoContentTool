@@ -67,8 +67,14 @@ function App() {
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (formData.productLink && formData.productLink.includes('leonardo.vn')) {
-        fetchProductDescription(formData.productLink);
+      if (formData.productLink) {
+        // Chuẩn hóa URL trước khi kiểm tra
+        const normalizedUrl = formData.productLink.toLowerCase().trim();
+        if (normalizedUrl.includes('leonardo.vn')) {
+          fetchProductDescription(formData.productLink);
+        } else {
+          toast.error("Vui lòng nhập link sản phẩm từ leonardo.vn");
+        }
       }
     }, 1000);
 
@@ -210,7 +216,7 @@ function App() {
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Nội dung đã tạo</h2>
               {generatedContent ? (
                 <div className="flex-1 relative bg-gray-50 rounded-lg p-6">
-                  <pre className="whitespace-pre-wrap text-gray-800 text-base">{generatedContent}</pre>
+                  <pre className="whitespace-pre-wrap text-gray-800 text-base" style={{ fontFamily: 'Arial, sans-serif' }}>{generatedContent}</pre>
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(generatedContent);
@@ -223,7 +229,7 @@ function App() {
                   </button>
                 </div>
               ) : (
-                <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg">
+                <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
                   Nội dung sẽ xuất hiện ở đây sau khi được tạo
                 </div>
               )}
