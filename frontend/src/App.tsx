@@ -3,7 +3,7 @@ import axios from 'axios';
 import { ClipboardIcon } from '@heroicons/react/24/outline';
 import { toast, Toaster } from 'react-hot-toast';
 
-const API_URL = 'https://auto-content-tool-c7qx.vercel.app';
+const API_URL = 'https://auto-content-tool-c7qx.vercel.app/api';
 
 interface FormState {
   productDescription: string;
@@ -39,10 +39,17 @@ function App() {
       setIsFetchingDescription(true);
       setError('');
       
-      const formData = new FormData();
-      formData.append("product_url", url);
+      let normalizedUrl = url.trim();
+      if (!normalizedUrl.startsWith('http')) {
+        normalizedUrl = 'https://' + normalizedUrl;
+      }
       
-      const response = await axios.post(`${API_URL}/api/fetch-product`, formData);
+      const formData = new FormData();
+      formData.append("product_url", normalizedUrl);
+      
+      console.log('Fetching product from URL:', normalizedUrl);
+      const response = await axios.post(`${API_URL}/fetch-product`, formData);
+      console.log('API Response:', response.data);
       
       if (response.data.status === "success") {
         setFormData(prev => ({
@@ -54,10 +61,15 @@ function App() {
         toast.error(response.data.message || "Không thể lấy thông tin sản phẩm");
       }
     } catch (error) {
+      console.error('Full error:', error);
       if (axios.isAxiosError(error)) {
         const errorMessage = error.response?.data?.message || "Lỗi khi lấy thông tin sản phẩm";
         toast.error(errorMessage);
-        console.error("API Error:", error.response?.data);
+        console.error("API Error:", {
+          status: error.response?.status,
+          data: error.response?.data,
+          headers: error.response?.headers
+        });
       } else {
         toast.error("Đã xảy ra lỗi không xác định");
         console.error("Unknown Error:", error);
@@ -70,11 +82,10 @@ function App() {
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (formData.productLink) {
-        // Chuẩn hóa URL trước khi kiểm tra
         const normalizedUrl = formData.productLink.toLowerCase().trim();
         if (normalizedUrl.includes('leonardo.vn')) {
           fetchProductDescription(formData.productLink);
-        } else {
+        } else if (formData.productLink.length > 5) {
           toast.error("Vui lòng nhập link sản phẩm từ leonardo.vn");
         }
       }
@@ -85,6 +96,17 @@ function App() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.productLink) {
+      toast.error("Vui lòng nhập link sản phẩm");
+      return;
+    }
+
+    if (!formData.productLink.includes('leonardo.vn')) {
+      toast.error("Vui lòng nhập link sản phẩm từ leonardo.vn");
+      return;
+    }
+    
     setLoading(true);
     setError('');
     
@@ -96,7 +118,9 @@ function App() {
     formDataToSend.append("platform", formData.platform);
 
     try {
-      const response = await axios.post(`${API_URL}/api/generate-content`, formDataToSend);
+      console.log('Sending data to API:', Object.fromEntries(formDataToSend));
+      const response = await axios.post(`${API_URL}/generate-content`, formDataToSend);
+      console.log('API Response:', response.data);
       
       if (response.data.status === "success" && response.data.content) {
         setGeneratedContent(response.data.content);
@@ -106,11 +130,16 @@ function App() {
         toast.error("Không thể tạo nội dung");
       }
     } catch (error) {
+      console.error('Full error:', error);
       if (axios.isAxiosError(error)) {
         const errorMessage = error.response?.data?.error || "Lỗi kết nối đến API";
         setError(errorMessage);
         toast.error(errorMessage);
-        console.error("API Error:", error.response?.data);
+        console.error("API Error:", {
+          status: error.response?.status,
+          data: error.response?.data,
+          headers: error.response?.headers
+        });
       } else {
         const errorMessage = "Đã xảy ra lỗi không xác định";
         setError(errorMessage);
