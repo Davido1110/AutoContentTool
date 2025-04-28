@@ -242,34 +242,108 @@ def get_product_info_selenium(url):
         if driver:
             driver.quit()
 
+def get_product_info_bs4(url):
+    """Lấy thông tin sản phẩm sử dụng requests + BeautifulSoup"""
+    logger.info(f"Getting product info with BeautifulSoup from: {url}")
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    }
+    try:
+        resp = requests.get(url, headers=headers, timeout=10)
+        if resp.status_code != 200:
+            logger.warning(f"Failed to fetch page, status code: {resp.status_code}")
+            return None
+        soup = BeautifulSoup(resp.text, "html.parser")
+        product_info = []
+
+        # Tên sản phẩm
+        name = None
+        for selector in ["h1.product-title", "h1.title", "h1", ".product-title", ".product__title"]:
+            el = soup.select_one(selector)
+            if el and el.get_text(strip=True):
+                name = el.get_text(strip=True)
+                break
+        if name:
+            product_info.append(f"Tên sản phẩm: {name}")
+        else:
+            logger.warning("Không tìm thấy tên sản phẩm với các selector phổ biến")
+
+        # Giá sản phẩm
+        price = None
+        for selector in ["span.product-price", "span.price", ".product-price", ".price", "[class*='price']"]:
+            el = soup.select_one(selector)
+            if el and el.get_text(strip=True) and '₫' in el.get_text():
+                price = el.get_text(strip=True)
+                break
+        if price:
+            product_info.append(f"Giá: {price}")
+        else:
+            logger.warning("Không tìm thấy giá sản phẩm với các selector phổ biến")
+
+        # Mô tả sản phẩm
+        description = None
+        for selector in [
+            "div.product-description",
+            "div#ProductInfo-template--16663828285627__main .rte",
+            ".product__description",
+            "div[itemprop='description']",
+            "#product-description",
+            ".product-single__description",
+            "div.rte"
+        ]:
+            el = soup.select_one(selector)
+            if el and el.get_text(strip=True):
+                description = el.get_text(strip=True)
+                break
+        if not description:
+            # Thử lấy đoạn văn bản đầu tiên sau giá
+            paragraphs = soup.find_all('p')
+            for p in paragraphs:
+                if p.get_text(strip=True) and len(p.get_text(strip=True)) > 30:
+                    description = p.get_text(strip=True)
+                    break
+        if description:
+            product_info.append(description)
+        else:
+            logger.warning("Không tìm thấy mô tả sản phẩm với các selector phổ biến")
+
+        # Thông tin chi tiết (ul, li)
+        details = []
+        for ul in soup.find_all('ul'):
+            text = ul.get_text("\n", strip=True)
+            if text and len(text) > 20 and text not in product_info:
+                details.append(text)
+        if details:
+            product_info.extend(details)
+
+        if not product_info:
+            logger.warning("No product information found with BeautifulSoup. Dumping body HTML for debug.")
+            logger.debug(f"BODY HTML: {resp.text[:1000]}")
+            return None
+        return "\n".join(product_info)
+    except Exception as e:
+        logger.error(f"Error in get_product_info_bs4: {str(e)}")
+        return None
+
 @app.route("/api/fetch-product", methods=["POST", "OPTIONS"])
 def fetch_product():
     if request.method == "OPTIONS":
         return "", 204
-        
     try:
-        # Nhận URL từ frontend
         product_url = request.form.get("product_url")
         logger.info(f"Received URL: {product_url}")
-        
         if not product_url:
             return jsonify({
                 "status": "error",
                 "message": "Vui lòng cung cấp URL sản phẩm"
             }), 400
-            
-        # Validate URL format
         if not re.match(r'^https?://(?:www\.)?leonardo\.vn/.*$', product_url):
             return jsonify({
                 "status": "error",
                 "message": "URL không hợp lệ. URL phải bắt đầu bằng https://leonardo.vn"
             }), 400
-            
-        # Làm sạch URL
         product_url = clean_url(product_url)
         logger.info(f"Cleaned URL: {product_url}")
-        
-        # Check cache first
         cached_data = get_cached_product(product_url)
         if cached_data:
             logger.info("Returning cached data")
@@ -277,31 +351,18 @@ def fetch_product():
                 "status": "success",
                 "description": cached_data
             })
-            
-        # Lấy thông tin sản phẩm bằng Selenium
-        try:
-            product_info = get_product_info_selenium(product_url)
-        except Exception as e:
-            logger.error(f"Selenium error: {str(e)}")
-            return jsonify({
-                "status": "error",
-                "message": "Không thể truy cập thông tin sản phẩm. Vui lòng thử lại sau."
-            }), 503
-        
+        # Dùng BeautifulSoup thay cho Selenium
+        product_info = get_product_info_bs4(product_url)
         if not product_info:
             return jsonify({
                 "status": "error",
                 "message": "Không tìm thấy thông tin sản phẩm"
             }), 404
-            
-        # Cache the result
         cache_product(product_url, product_info)
-            
         return jsonify({
             "status": "success",
             "description": product_info
         })
-        
     except Exception as e:
         logger.error(f"Error in fetch_product: {str(e)}")
         return jsonify({
