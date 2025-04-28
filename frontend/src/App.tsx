@@ -242,7 +242,7 @@ function App() {
       >
         {/* App Title */}
         <h1 className="text-4xl font-bold text-indigo-800 mb-10 drop-shadow-lg bg-white/80 px-8 py-4 rounded-xl shadow-lg text-center">
-          Tool Content Tự Động - By Davido
+          Tool Content Tự Động - By CMH 🐽
         </h1>
         <div className="max-w-7xl w-full flex gap-8">
           {/* Form Section */}
