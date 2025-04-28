@@ -232,7 +232,7 @@ function App() {
   return (
     <ErrorBoundary>
       <div
-        className="min-h-screen w-full p-6 relative"
+        className="min-h-screen w-full p-12 flex items-center justify-center"
         style={{
           backgroundImage: 'url(/bg.jpg)',
           backgroundSize: 'cover',
@@ -240,166 +240,162 @@ function App() {
           backgroundRepeat: 'no-repeat'
         }}
       >
-        {/* Đã bỏ overlay */}
-        <div className="max-w-7xl mx-auto relative z-10">
-          <h1 className="text-3xl font-bold text-center text-gray-800 mb-8" style={{textShadow: '0 2px 8px #fff'}}>Công Cụ Tạo Nội Dung AI</h1>
-          <div className="flex gap-6">
-            {/* Form Section - 1/3 */}
-            <ErrorBoundary>
-              <div className="flex-1 bg-white rounded-xl shadow-lg p-6">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {error?.missing_fields && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                      <p className="font-medium">Vui lòng điền đầy đủ thông tin:</p>
-                      <ul className="list-disc list-inside mt-2">
-                        {error.missing_fields.map((field, index) => (
-                          <li key={index}>{field}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Link sản phẩm
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="url"
-                        name="productLink"
-                        value={formData.productLink}
-                        onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border ${
-                          error?.message?.includes('link') ? 'border-red-500' : 'border-gray-300'
-                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
-                        placeholder="https://..."
-                        required
-                      />
-                      {isFetchingDescription && (
-                        <div className="absolute right-2 top-2">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500"></div>
-                        </div>
-                      )}
-                    </div>
-                    {error?.message?.includes('link') && (
-                      <p className="mt-1 text-sm text-red-600">{error.message}</p>
+        <div className="max-w-7xl w-full flex gap-8">
+          {/* Form Section */}
+          <ErrorBoundary>
+            <div className="flex-1 bg-white/80 rounded-xl shadow-lg p-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {error?.missing_fields && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                    <p className="font-medium">Vui lòng điền đầy đủ thông tin:</p>
+                    <ul className="list-disc list-inside mt-2">
+                      {error.missing_fields.map((field, index) => (
+                        <li key={index}>{field}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Link sản phẩm
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="url"
+                      name="productLink"
+                      value={formData.productLink}
+                      onChange={handleInputChange}
+                      className={`w-full px-3 py-2 border ${
+                        error?.message?.includes('link') ? 'border-red-500' : 'border-gray-300'
+                      } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                      placeholder="https://..."
+                      required
+                    />
+                    {isFetchingDescription && (
+                      <div className="absolute right-2 top-2">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500"></div>
+                      </div>
                     )}
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Giới tính
-                    </label>
-                    <select
-                      name="gender"
-                      value={formData.gender}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    >
-                      <option value="male">Nam</option>
-                      <option value="female">Nữ</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Độ tuổi
-                    </label>
-                    <select
-                      name="ageGroup"
-                      value={formData.ageGroup}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    >
-                      <option value="18-22">18-22 (Sinh viên, mới đi làm)</option>
-                      <option value="23-28">23-28 (Phát triển sự nghiệp)</option>
-                      <option value="29-35">29-35 (Sự nghiệp ổn định)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nền tảng
-                    </label>
-                    <select
-                      name="platform"
-                      value={formData.platform}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    >
-                      <option value="facebook">Facebook Page</option>
-                    </select>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading || isFetchingDescription}
-                    className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                      loading || isFetchingDescription ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'
-                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200`}
-                  >
-                    {loading ? 'Đang tạo...' : isFetchingDescription ? 'Đang lấy thông tin...' : 'Tạo nội dung'}
-                  </button>
-
-                  {error && (
-                    <div className="mt-4 text-red-600 text-sm">{error.message}</div>
+                  {error?.message?.includes('link') && (
+                    <p className="mt-1 text-sm text-red-600">{error.message}</p>
                   )}
-                </form>
-              </div>
-            </ErrorBoundary>
+                </div>
 
-            {/* Kết quả 1 - 1/3 */}
-            <ErrorBoundary>
-              <div className="flex-1 bg-white rounded-xl shadow-lg p-6 flex flex-col">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">Kết quả 1</h2>
-                {generatedContent1 ? (
-                  <div className="flex-1 relative bg-gray-50 rounded-lg p-4 border border-indigo-200">
-                    <pre className="whitespace-pre-wrap text-gray-800 text-base" style={{ fontFamily: 'Arial, sans-serif' }}>{generatedContent1}</pre>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(generatedContent1);
-                        toast.success("Đã sao chép nội dung 1!");
-                      }}
-                      className="absolute top-4 right-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
-                      title="Sao chép nội dung 1"
-                    >
-                      <ClipboardIcon className="h-5 w-5" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
-                    Nội dung 1 sẽ xuất hiện ở đây sau khi được tạo
-                  </div>
-                )}
-              </div>
-            </ErrorBoundary>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Giới tính
+                  </label>
+                  <select
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="male">Nam</option>
+                    <option value="female">Nữ</option>
+                  </select>
+                </div>
 
-            {/* Kết quả 2 - 1/3 */}
-            <ErrorBoundary>
-              <div className="flex-1 bg-white rounded-xl shadow-lg p-6 flex flex-col">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">Kết quả 2</h2>
-                {generatedContent2 ? (
-                  <div className="flex-1 relative bg-gray-50 rounded-lg p-4 border border-indigo-200">
-                    <pre className="whitespace-pre-wrap text-gray-800 text-base" style={{ fontFamily: 'Arial, sans-serif' }}>{generatedContent2}</pre>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(generatedContent2);
-                        toast.success("Đã sao chép nội dung 2!");
-                      }}
-                      className="absolute top-4 right-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
-                      title="Sao chép nội dung 2"
-                    >
-                      <ClipboardIcon className="h-5 w-5" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
-                    Nội dung 2 sẽ xuất hiện ở đây sau khi được tạo
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Độ tuổi
+                  </label>
+                  <select
+                    name="ageGroup"
+                    value={formData.ageGroup}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="18-22">18-22 (Sinh viên, mới đi làm)</option>
+                    <option value="23-28">23-28 (Phát triển sự nghiệp)</option>
+                    <option value="29-35">29-35 (Sự nghiệp ổn định)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nền tảng
+                  </label>
+                  <select
+                    name="platform"
+                    value={formData.platform}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="facebook">Facebook Page</option>
+                  </select>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || isFetchingDescription}
+                  className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                    loading || isFetchingDescription ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'
+                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200`}
+                >
+                  {loading ? 'Đang tạo...' : isFetchingDescription ? 'Đang lấy thông tin...' : 'Tạo nội dung'}
+                </button>
+
+                {error && (
+                  <div className="mt-4 text-red-600 text-sm">{error.message}</div>
                 )}
-              </div>
-            </ErrorBoundary>
-          </div>
+              </form>
+            </div>
+          </ErrorBoundary>
+
+          {/* Kết quả 1 */}
+          <ErrorBoundary>
+            <div className="flex-1 bg-white/80 rounded-xl shadow-lg p-6 flex flex-col">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Kết quả 1</h2>
+              {generatedContent1 ? (
+                <div className="flex-1 relative bg-gray-50 rounded-lg p-4 border border-indigo-200">
+                  <pre className="whitespace-pre-wrap text-gray-800 text-base" style={{ fontFamily: 'Arial, sans-serif' }}>{generatedContent1}</pre>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedContent1);
+                      toast.success("Đã sao chép nội dung 1!");
+                    }}
+                    className="absolute top-4 right-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
+                    title="Sao chép nội dung 1"
+                  >
+                    <ClipboardIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
+                  Nội dung 1 sẽ xuất hiện ở đây sau khi được tạo
+                </div>
+              )}
+            </div>
+          </ErrorBoundary>
+
+          {/* Kết quả 2 */}
+          <ErrorBoundary>
+            <div className="flex-1 bg-white/80 rounded-xl shadow-lg p-6 flex flex-col">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Kết quả 2</h2>
+              {generatedContent2 ? (
+                <div className="flex-1 relative bg-gray-50 rounded-lg p-4 border border-indigo-200">
+                  <pre className="whitespace-pre-wrap text-gray-800 text-base" style={{ fontFamily: 'Arial, sans-serif' }}>{generatedContent2}</pre>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedContent2);
+                      toast.success("Đã sao chép nội dung 2!");
+                    }}
+                    className="absolute top-4 right-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
+                    title="Sao chép nội dung 2"
+                  >
+                    <ClipboardIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
+                  Nội dung 2 sẽ xuất hiện ở đây sau khi được tạo
+                </div>
+              )}
+            </div>
+          </ErrorBoundary>
         </div>
         <Toaster position="top-right" />
       </div>
