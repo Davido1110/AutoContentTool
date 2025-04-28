@@ -92,7 +92,8 @@ function App() {
     ageGroup: '18-22',
     platform: 'facebook'
   });
-  const [generatedContent, setGeneratedContent] = useState<string>("");
+  const [generatedContent1, setGeneratedContent1] = useState<string>("");
+  const [generatedContent2, setGeneratedContent2] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [isFetchingDescription, setIsFetchingDescription] = useState(false);
@@ -175,40 +176,33 @@ function App() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!formData.productLink) {
       toast.error("Vui lòng nhập link sản phẩm");
       return;
     }
-
     if (!formData.productLink.includes('leonardo.vn')) {
       toast.error("Vui lòng nhập link sản phẩm từ leonardo.vn");
       return;
     }
-    
     setLoading(true);
     setError(null);
-    
-    const formDataToSend = new URLSearchParams();
-    formDataToSend.append("product_description", formData.productDescription);
-    formDataToSend.append("product_link", normalizeLeonardoUrl(formData.productLink));
-    formDataToSend.append("gender", formData.gender);
-    formDataToSend.append("age_group", formData.ageGroup);
-    formDataToSend.append("platform", formData.platform);
-
+    setGeneratedContent1("");
+    setGeneratedContent2("");
+    const formDataToSend1 = new URLSearchParams();
+    formDataToSend1.append("product_description", formData.productDescription);
+    formDataToSend1.append("product_link", normalizeLeonardoUrl(formData.productLink));
+    formDataToSend1.append("gender", formData.gender);
+    formDataToSend1.append("age_group", formData.ageGroup);
+    formDataToSend1.append("platform", formData.platform);
+    const formDataToSend2 = new URLSearchParams(formDataToSend1);
     try {
-      const response = await axios.post(`${API_URL}/api/generate-content`, formDataToSend, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      });
-      
-      if (response.data.status === "success" && response.data.content) {
-        setGeneratedContent(response.data.content);
-        toast.success("Đã tạo nội dung thành công!");
-      } else {
-        throw new Error("Phản hồi không hợp lệ từ API");
-      }
+      const [res1, res2] = await Promise.all([
+        axios.post(`${API_URL}/api/generate-content`, formDataToSend1, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }),
+        axios.post(`${API_URL}/api/generate-content`, formDataToSend2, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } })
+      ]);
+      setGeneratedContent1(res1.data.content);
+      setGeneratedContent2(res2.data.content);
+      toast.success("Đã tạo 2 nội dung thành công!");
     } catch (error) {
       console.error('Error generating content:', error);
       
@@ -351,25 +345,52 @@ function App() {
               <div className="w-1/2 bg-white rounded-xl shadow-lg p-6">
                 <div className="h-full flex flex-col">
                   <h2 className="text-xl font-semibold text-gray-800 mb-4">Nội dung đã tạo</h2>
-                  {generatedContent ? (
-                    <div className="flex-1 relative bg-gray-50 rounded-lg p-6">
-                      <pre className="whitespace-pre-wrap text-gray-800 text-base" style={{ fontFamily: 'Arial, sans-serif' }}>{generatedContent}</pre>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(generatedContent);
-                          toast.success("Đã sao chép nội dung!");
-                        }}
-                        className="absolute top-4 right-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
-                        title="Sao chép nội dung"
-                      >
-                        <ClipboardIcon className="h-5 w-5" />
-                      </button>
+                  <div className="flex gap-4">
+                    <div className="flex-1 relative bg-gray-50 rounded-lg p-4 border border-indigo-200">
+                      <div className="font-bold mb-2 text-indigo-700">Kết quả 1</div>
+                      {generatedContent1 ? (
+                        <>
+                          <pre className="whitespace-pre-wrap text-gray-800 text-base" style={{ fontFamily: 'Arial, sans-serif' }}>{generatedContent1}</pre>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(generatedContent1);
+                              toast.success("Đã sao chép nội dung 1!");
+                            }}
+                            className="absolute top-4 right-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
+                            title="Sao chép nội dung 1"
+                          >
+                            <ClipboardIcon className="h-5 w-5" />
+                          </button>
+                        </>
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
+                          Nội dung 1 sẽ xuất hiện ở đây sau khi được tạo
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
-                      Nội dung sẽ xuất hiện ở đây sau khi được tạo
+                    <div className="flex-1 relative bg-gray-50 rounded-lg p-4 border border-indigo-200">
+                      <div className="font-bold mb-2 text-indigo-700">Kết quả 2</div>
+                      {generatedContent2 ? (
+                        <>
+                          <pre className="whitespace-pre-wrap text-gray-800 text-base" style={{ fontFamily: 'Arial, sans-serif' }}>{generatedContent2}</pre>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(generatedContent2);
+                              toast.success("Đã sao chép nội dung 2!");
+                            }}
+                            className="absolute top-4 right-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
+                            title="Sao chép nội dung 2"
+                          >
+                            <ClipboardIcon className="h-5 w-5" />
+                          </button>
+                        </>
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
+                          Nội dung 2 sẽ xuất hiện ở đây sau khi được tạo
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </ErrorBoundary>
