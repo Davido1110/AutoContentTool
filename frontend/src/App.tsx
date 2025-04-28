@@ -231,14 +231,13 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-100 p-6">
+      <div className="min-h-screen w-full bg-cover bg-center p-6" style={{ backgroundImage: 'url(/bg.jpg)' }}>
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">Công Cụ Tạo Nội Dung AI</h1>
-          
+          <h1 className="text-3xl font-bold text-center text-gray-800 mb-8" style={{textShadow: '0 2px 8px #fff'}}>Công Cụ Tạo Nội Dung AI</h1>
           <div className="flex gap-6">
-            {/* Form Section - Left Side */}
+            {/* Form Section - 1/3 */}
             <ErrorBoundary>
-              <div className="w-1/2 bg-white rounded-xl shadow-lg p-6">
+              <div className="flex-1 bg-white rounded-xl shadow-lg p-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {error?.missing_fields && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -340,58 +339,55 @@ function App() {
               </div>
             </ErrorBoundary>
 
-            {/* Generated Content Section - Right Side */}
+            {/* Kết quả 1 - 1/3 */}
             <ErrorBoundary>
-              <div className="w-1/2 bg-white rounded-xl shadow-lg p-6">
-                <div className="h-full flex flex-col">
-                  <h2 className="text-xl font-semibold text-gray-800 mb-4">Nội dung đã tạo</h2>
-                  <div className="flex gap-4">
-                    <div className="flex-1 relative bg-gray-50 rounded-lg p-4 border border-indigo-200">
-                      <div className="font-bold mb-2 text-indigo-700">Kết quả 1</div>
-                      {generatedContent1 ? (
-                        <>
-                          <pre className="whitespace-pre-wrap text-gray-800 text-base" style={{ fontFamily: 'Arial, sans-serif' }}>{generatedContent1}</pre>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(generatedContent1);
-                              toast.success("Đã sao chép nội dung 1!");
-                            }}
-                            className="absolute top-4 right-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
-                            title="Sao chép nội dung 1"
-                          >
-                            <ClipboardIcon className="h-5 w-5" />
-                          </button>
-                        </>
-                      ) : (
-                        <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
-                          Nội dung 1 sẽ xuất hiện ở đây sau khi được tạo
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 relative bg-gray-50 rounded-lg p-4 border border-indigo-200">
-                      <div className="font-bold mb-2 text-indigo-700">Kết quả 2</div>
-                      {generatedContent2 ? (
-                        <>
-                          <pre className="whitespace-pre-wrap text-gray-800 text-base" style={{ fontFamily: 'Arial, sans-serif' }}>{generatedContent2}</pre>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(generatedContent2);
-                              toast.success("Đã sao chép nội dung 2!");
-                            }}
-                            className="absolute top-4 right-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
-                            title="Sao chép nội dung 2"
-                          >
-                            <ClipboardIcon className="h-5 w-5" />
-                          </button>
-                        </>
-                      ) : (
-                        <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
-                          Nội dung 2 sẽ xuất hiện ở đây sau khi được tạo
-                        </div>
-                      )}
-                    </div>
+              <div className="flex-1 bg-white rounded-xl shadow-lg p-6 flex flex-col">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Kết quả 1</h2>
+                {generatedContent1 ? (
+                  <div className="flex-1 relative bg-gray-50 rounded-lg p-4 border border-indigo-200">
+                    <pre className="whitespace-pre-wrap text-gray-800 text-base" style={{ fontFamily: 'Arial, sans-serif' }}>{generatedContent1}</pre>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedContent1);
+                        toast.success("Đã sao chép nội dung 1!");
+                      }}
+                      className="absolute top-4 right-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
+                      title="Sao chép nội dung 1"
+                    >
+                      <ClipboardIcon className="h-5 w-5" />
+                    </button>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
+                    Nội dung 1 sẽ xuất hiện ở đây sau khi được tạo
+                  </div>
+                )}
+              </div>
+            </ErrorBoundary>
+
+            {/* Kết quả 2 - 1/3 */}
+            <ErrorBoundary>
+              <div className="flex-1 bg-white rounded-xl shadow-lg p-6 flex flex-col">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Kết quả 2</h2>
+                {generatedContent2 ? (
+                  <div className="flex-1 relative bg-gray-50 rounded-lg p-4 border border-indigo-200">
+                    <pre className="whitespace-pre-wrap text-gray-800 text-base" style={{ fontFamily: 'Arial, sans-serif' }}>{generatedContent2}</pre>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedContent2);
+                        toast.success("Đã sao chép nội dung 2!");
+                      }}
+                      className="absolute top-4 right-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
+                      title="Sao chép nội dung 2"
+                    >
+                      <ClipboardIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-50 rounded-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
+                    Nội dung 2 sẽ xuất hiện ở đây sau khi được tạo
+                  </div>
+                )}
               </div>
             </ErrorBoundary>
           </div>
