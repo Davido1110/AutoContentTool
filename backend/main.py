@@ -116,74 +116,125 @@ def setup_driver():
     return driver
 
 def get_product_info_selenium(url):
-    """Lấy thông tin sản phẩm sử dụng Selenium"""
+    """Lấy thông tin sản phẩm sử dụng Selenium với selector linh hoạt hơn"""
     logger.info(f"Getting product info with Selenium from: {url}")
     driver = None
     try:
         driver = setup_driver()
         driver.get(url)
-        
-        # Đợi trang load xong
         time.sleep(2)
-        
         product_info = []
-        
-        # Đợi và lấy tên sản phẩm
+
+        # Lấy tên sản phẩm
         try:
-            product_name = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "h1.product-title"))
-            )
-            product_info.append(f"Tên sản phẩm: {product_name.text.strip()}")
+            # Thử nhiều selector khác nhau
+            name_selectors = [
+                "h1.product-title",
+                "h1.title",
+                "h1",
+                ".product-title",
+                ".product__title"
+            ]
+            product_name = None
+            for selector in name_selectors:
+                try:
+                    el = driver.find_element(By.CSS_SELECTOR, selector)
+                    if el and el.text.strip():
+                        product_name = el.text.strip()
+                        break
+                except Exception:
+                    continue
+            if product_name:
+                product_info.append(f"Tên sản phẩm: {product_name}")
+            else:
+                logger.warning("Không tìm thấy tên sản phẩm với các selector phổ biến")
         except Exception as e:
             logger.warning(f"Could not find product name: {str(e)}")
-        
+
         # Lấy giá sản phẩm
         try:
-            price_element = driver.find_element(By.CSS_SELECTOR, "span.price")
-            if price_element:
-                product_info.append(f"Giá: {price_element.text.strip()}")
+            price_selectors = [
+                "span.product-price",
+                "span.price",
+                ".product-price",
+                ".price",
+                "[class*='price']"
+            ]
+            price = None
+            for selector in price_selectors:
+                try:
+                    el = driver.find_element(By.CSS_SELECTOR, selector)
+                    if el and el.text.strip() and '₫' in el.text:
+                        price = el.text.strip()
+                        break
+                except Exception:
+                    continue
+            if price:
+                product_info.append(f"Giá: {price}")
+            else:
+                logger.warning("Không tìm thấy giá sản phẩm với các selector phổ biến")
         except Exception as e:
             logger.warning(f"Could not find price: {str(e)}")
-        
+
         # Lấy mô tả sản phẩm
-        description_selectors = [
-            "div.product-description",
-            "div.description",
-            "div[itemprop='description']",
-            ".product__description",
-            "#product-description",
-            ".product-single__description"
-        ]
-        
-        for selector in description_selectors:
-            try:
-                desc_element = driver.find_element(By.CSS_SELECTOR, selector)
-                if desc_element:
-                    text = desc_element.text.strip()
-                    if text and text not in product_info:
-                        product_info.append(text)
+        try:
+            desc_selectors = [
+                "div.product-description",
+                "div#ProductInfo-template--16663828285627__main .rte",
+                ".product__description",
+                "div[itemprop='description']",
+                "#product-description",
+                ".product-single__description",
+                "div.rte"
+            ]
+            description = None
+            for selector in desc_selectors:
+                try:
+                    el = driver.find_element(By.CSS_SELECTOR, selector)
+                    if el and el.text.strip():
+                        description = el.text.strip()
                         break
-            except:
-                continue
-        
-        # Lấy thông tin chi tiết
-        detail_texts = ["Chất liệu", "Size", "Kích thước", "Đổi size", "Mẹo sử dụng"]
-        for text in detail_texts:
-            try:
-                elements = driver.find_elements(By.XPATH, f"//*[contains(text(), '{text}')]")
-                for element in elements:
-                    detail_text = element.text.strip()
-                    if detail_text and detail_text not in product_info:
-                        product_info.append(detail_text)
-            except Exception as e:
-                logger.warning(f"Could not find detail {text}: {str(e)}")
-        
+                except Exception:
+                    continue
+            if not description:
+                # Thử lấy đoạn văn bản đầu tiên sau giá
+                try:
+                    paragraphs = driver.find_elements(By.TAG_NAME, "p")
+                    for p in paragraphs:
+                        if p.text and len(p.text) > 30:
+                            description = p.text.strip()
+                            break
+                except Exception:
+                    pass
+            if description:
+                product_info.append(description)
+            else:
+                logger.warning("Không tìm thấy mô tả sản phẩm với các selector phổ biến")
+        except Exception as e:
+            logger.warning(f"Could not find description: {str(e)}")
+
+        # Lấy thông tin chi tiết (li, ul)
+        try:
+            details = []
+            ul_elements = driver.find_elements(By.TAG_NAME, "ul")
+            for ul in ul_elements:
+                text = ul.text.strip()
+                if text and len(text) > 20 and text not in product_info:
+                    details.append(text)
+            if details:
+                product_info.extend(details)
+        except Exception as e:
+            logger.warning(f"Could not find detail list: {str(e)}")
+
         if not product_info:
-            logger.warning("No product information found with Selenium")
+            logger.warning("No product information found with Selenium. Dumping body HTML for debug.")
+            try:
+                body_html = driver.find_element(By.TAG_NAME, "body").get_attribute("innerHTML")
+                logger.debug(f"BODY HTML: {body_html[:1000]}")
+            except Exception as e:
+                logger.error(f"Could not dump body HTML: {str(e)}")
             return None
-            
         return "\n".join(product_info)
-        
     except Exception as e:
         logger.error(f"Error in get_product_info_selenium: {str(e)}")
         return None
