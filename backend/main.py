@@ -44,7 +44,12 @@ logger = logging.getLogger(__name__)
 CACHE_FILE = "product_cache.json"
 CACHE_EXPIRY = timedelta(hours=24)  # Cache expires after 24 hours
 
+# Detect read-only file system (Vercel/serverless)
+READ_ONLY_FS = os.environ.get('VERCEL', False) or os.environ.get('READ_ONLY_CACHE', False)
+
 def load_cache():
+    if READ_ONLY_FS:
+        return {}
     try:
         with open(CACHE_FILE, 'r') as f:
             return json.load(f)
@@ -52,10 +57,15 @@ def load_cache():
         return {}
 
 def save_cache(cache):
+    if READ_ONLY_FS:
+        logger.warning('Skip saving cache: read-only file system')
+        return
     with open(CACHE_FILE, 'w') as f:
         json.dump(cache, f)
 
 def get_cached_product(url):
+    if READ_ONLY_FS:
+        return None
     cache = load_cache()
     if url in cache:
         cached_data = cache[url]
@@ -65,6 +75,9 @@ def get_cached_product(url):
     return None
 
 def cache_product(url, data):
+    if READ_ONLY_FS:
+        logger.warning('Skip caching product: read-only file system')
+        return
     cache = load_cache()
     cache[url] = {
         'data': data,
