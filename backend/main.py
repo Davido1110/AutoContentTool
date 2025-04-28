@@ -15,6 +15,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import time
+import json
+from datetime import datetime, timedelta
 
 # Load environment variables
 load_dotenv()
@@ -37,6 +39,38 @@ openai.api_key = api_key
 # Cấu hình logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+# Cache configuration
+CACHE_FILE = "product_cache.json"
+CACHE_EXPIRY = timedelta(hours=24)  # Cache expires after 24 hours
+
+def load_cache():
+    try:
+        with open(CACHE_FILE, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+def save_cache(cache):
+    with open(CACHE_FILE, 'w') as f:
+        json.dump(cache, f)
+
+def get_cached_product(url):
+    cache = load_cache()
+    if url in cache:
+        cached_data = cache[url]
+        cache_time = datetime.fromisoformat(cached_data['timestamp'])
+        if datetime.now() - cache_time < CACHE_EXPIRY:
+            return cached_data['data']
+    return None
+
+def cache_product(url, data):
+    cache = load_cache()
+    cache[url] = {
+        'data': data,
+        'timestamp': datetime.now().isoformat()
+    }
+    save_cache(cache)
 
 @app.route("/", methods=["GET"])
 def root():
@@ -173,25 +207,44 @@ def fetch_product():
                 "message": "Vui lòng cung cấp URL sản phẩm"
             }), 400
             
+        # Validate URL format
+        if not re.match(r'^https?://(?:www\.)?leonardo\.vn/.*$', product_url):
+            return jsonify({
+                "status": "error",
+                "message": "URL không hợp lệ. URL phải bắt đầu bằng https://leonardo.vn"
+            }), 400
+            
         # Làm sạch URL
         product_url = clean_url(product_url)
         logger.info(f"Cleaned URL: {product_url}")
-            
-        # Kiểm tra xem có phải URL của Leonardo không
-        if "leonardo.vn" not in product_url:
+        
+        # Check cache first
+        cached_data = get_cached_product(product_url)
+        if cached_data:
+            logger.info("Returning cached data")
             return jsonify({
-                "status": "error",
-                "message": "URL không hợp lệ. Chỉ hỗ trợ sản phẩm từ leonardo.vn"
-            }), 400
+                "status": "success",
+                "description": cached_data
+            })
             
         # Lấy thông tin sản phẩm bằng Selenium
-        product_info = get_product_info_selenium(product_url)
+        try:
+            product_info = get_product_info_selenium(product_url)
+        except Exception as e:
+            logger.error(f"Selenium error: {str(e)}")
+            return jsonify({
+                "status": "error",
+                "message": "Không thể truy cập thông tin sản phẩm. Vui lòng thử lại sau."
+            }), 503
         
         if not product_info:
             return jsonify({
                 "status": "error",
                 "message": "Không tìm thấy thông tin sản phẩm"
             }), 404
+            
+        # Cache the result
+        cache_product(product_url, product_info)
             
         return jsonify({
             "status": "success",
@@ -214,8 +267,6 @@ def generate_content():
         return jsonify({"error": "Chưa cấu hình OpenAI API key"}), 500
 
     try:
-        print("Received form data:", request.form)  # Debug log
-        
         # Get form data
         product_description = request.form.get("product_description")
         product_link = request.form.get("product_link", "https://leonardo.vn")
@@ -223,6 +274,7 @@ def generate_content():
         age_group = request.form.get("age_group")
         platform = request.form.get("platform")
         
+        # Validate all required fields
         if not all([product_description, gender, age_group, platform]):
             missing_fields = []
             if not product_description: missing_fields.append("product_description")
@@ -233,6 +285,26 @@ def generate_content():
             return jsonify({
                 "error": "Vui lòng điền đầy đủ thông tin",
                 "missing_fields": missing_fields
+            }), 400
+
+        # Validate gender value
+        if gender not in ["male", "female"]:
+            return jsonify({
+                "error": "Giá trị giới tính không hợp lệ"
+            }), 400
+
+        # Validate age group
+        valid_age_groups = ["18-22", "23-28", "29-35"]
+        if age_group not in valid_age_groups:
+            return jsonify({
+                "error": "Nhóm tuổi không hợp lệ"
+            }), 400
+
+        # Validate platform
+        valid_platforms = ["facebook", "instagram", "tiktok"]
+        if platform not in valid_platforms:
+            return jsonify({
+                "error": "Nền tảng không hợp lệ"
             }), 400
 
         # Chuyển đổi gender sang tiếng Việt
