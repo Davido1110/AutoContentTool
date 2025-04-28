@@ -39,6 +39,20 @@ def test():
         "openai_key_configured": bool(api_key)
     })
 
+def clean_url(url):
+    # Loại bỏ các ký tự đặc biệt ở đầu URL
+    url = url.strip().lstrip('@')
+    
+    # Đảm bảo URL bắt đầu bằng https://
+    if not url.startswith('http'):
+        url = 'https://' + url
+    
+    # Đảm bảo có www nếu là domain leonardo.vn
+    if 'leonardo.vn' in url and 'www.' not in url:
+        url = url.replace('https://', 'https://www.')
+        
+    return url
+
 @app.route("/api/fetch-product", methods=["POST", "OPTIONS"])
 def fetch_product():
     if request.method == "OPTIONS":
@@ -54,6 +68,10 @@ def fetch_product():
                 "status": "error",
                 "message": "Vui lòng cung cấp URL sản phẩm"
             }), 400
+            
+        # Làm sạch URL
+        product_url = clean_url(product_url)
+        print(f"Cleaned URL: {product_url}")
             
         # Kiểm tra xem có phải URL của Leonardo không
         if "leonardo.vn" not in product_url:
