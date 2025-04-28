@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import requests
 from bs4 import BeautifulSoup
 import re
+import logging
 
 # Load environment variables
 load_dotenv()
@@ -24,6 +25,10 @@ CORS(app, resources={
 # Set OpenAI API key
 api_key = os.getenv("OPENAI_API_KEY")
 openai.api_key = api_key
+
+# Cấu hình logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 @app.route("/", methods=["GET"])
 def root():
@@ -53,6 +58,95 @@ def clean_url(url):
         
     return url
 
+def get_product_info(url):
+    # Tạo session để duy trì cookies
+    session = requests.Session()
+    
+    # Headers giả lập trình duyệt Chrome trên Mac
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Cache-Control': 'max-age=0',
+        'Referer': 'https://www.leonardo.vn/',
+        'Origin': 'https://www.leonardo.vn'
+    }
+    
+    try:
+        # Trước tiên truy cập trang chủ để lấy cookies
+        logger.info("Accessing homepage to get cookies...")
+        session.get('https://www.leonardo.vn/', headers=headers, timeout=10)
+        
+        # Sau đó mới truy cập trang sản phẩm
+        logger.info(f"Accessing product page: {url}")
+        response = session.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        # Log response status và headers
+        logger.info(f"Response status: {response.status_code}")
+        logger.info(f"Response headers: {dict(response.headers)}")
+        
+        # Parse HTML
+        soup = BeautifulSoup(response.text, 'html5lib')
+        
+        # Tìm thông tin sản phẩm
+        product_info = []
+        
+        # Tìm tên sản phẩm
+        product_name = soup.find('h1', class_='product-title')
+        if product_name:
+            product_info.append(f"Tên sản phẩm: {product_name.get_text().strip()}")
+        
+        # Tìm giá
+        product_price = soup.find('span', class_='price')
+        if product_price:
+            product_info.append(f"Giá: {product_price.get_text().strip()}")
+        
+        # Tìm mô tả sản phẩm - thử nhiều selector khác nhau
+        description_selectors = [
+            'div.product-description',
+            'div.description',
+            'div[itemprop="description"]',
+            '.product__description',
+            '#product-description',
+            '.product-single__description',
+            '.product-info__description'
+        ]
+        
+        for selector in description_selectors:
+            description = soup.select_one(selector)
+            if description:
+                text = description.get_text().strip()
+                if text and text not in product_info:
+                    product_info.append(text)
+                    break
+        
+        # Tìm thông tin chi tiết
+        details = soup.find_all(['li', 'div'], string=re.compile(r'(Chất liệu|Size|Kích thước|Đổi size|Mẹo sử dụng)'))
+        for detail in details:
+            text = detail.get_text().strip()
+            if text and text not in product_info:
+                product_info.append(text)
+        
+        if not product_info:
+            logger.warning("No product information found in the page")
+            # Log HTML content để debug
+            logger.debug(f"Page HTML: {response.text[:1000]}...")
+            return None
+            
+        return "\n".join(product_info)
+        
+    except Exception as e:
+        logger.error(f"Error fetching product info: {str(e)}")
+        return None
+
 @app.route("/api/fetch-product", methods=["POST", "OPTIONS"])
 def fetch_product():
     if request.method == "OPTIONS":
@@ -61,7 +155,7 @@ def fetch_product():
     try:
         # Nhận URL từ frontend
         product_url = request.form.get("product_url")
-        print(f"Received URL: {product_url}")
+        logger.info(f"Received URL: {product_url}")
         
         if not product_url:
             return jsonify({
@@ -71,7 +165,7 @@ def fetch_product():
             
         # Làm sạch URL
         product_url = clean_url(product_url)
-        print(f"Cleaned URL: {product_url}")
+        logger.info(f"Cleaned URL: {product_url}")
             
         # Kiểm tra xem có phải URL của Leonardo không
         if "leonardo.vn" not in product_url:
@@ -80,109 +174,22 @@ def fetch_product():
                 "message": "URL không hợp lệ. Chỉ hỗ trợ sản phẩm từ leonardo.vn"
             }), 400
             
-        # Thêm headers để giả lập trình duyệt tốt hơn
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-User': '?1',
-            'Cache-Control': 'max-age=0'
-        }
+        # Lấy thông tin sản phẩm
+        product_info = get_product_info(product_url)
         
-        print(f"Sending request to: {product_url}")
-        # Thêm allow_redirects=True và verify=False để xử lý chuyển hướng và bỏ qua SSL
-        response = requests.get(product_url, headers=headers, timeout=10, allow_redirects=True, verify=False)
-        response.raise_for_status()
-        
-        # Parse HTML bằng BeautifulSoup với html5lib parser
-        soup = BeautifulSoup(response.text, 'html5lib')
-        
-        # Tìm phần mô tả sản phẩm
-        product_info = []
-        
-        # Tìm mô tả chính - thử nhiều cách khác nhau
-        description_selectors = [
-            'div[class*="product-description"]',  # Class chứa product-description
-            'div[class*="description"]',          # Class chứa description
-            'div[itemprop="description"]',        # Thuộc tính itemprop
-            '.product__description',              # Class product__description
-            '#product-description'                # ID product-description
-        ]
-        
-        main_description = None
-        for selector in description_selectors:
-            main_description = soup.select_one(selector)
-            if main_description:
-                break
-                
-        if main_description:
-            description_text = main_description.get_text().strip()
-            if description_text:
-                product_info.append(description_text)
-                
-        # Tìm thông tin chi tiết sản phẩm
-        detail_selectors = [
-            'li:contains("Chất liệu")',
-            'li:contains("Size")',
-            'li:contains("Kích thước")',
-            'li:contains("Đổi size")',
-            'li:contains("Mẹo sử dụng")',
-            'div[class*="product-details"]'
-        ]
-        
-        for selector in detail_selectors:
-            details = soup.find_all(string=re.compile(r'(Chất liệu|Size|Kích thước|Đổi size|Mẹo sử dụng)'))
-            for detail in details:
-                if detail.parent.name == 'li' or detail.parent.name == 'div':
-                    detail_text = detail.parent.get_text().strip()
-                    if detail_text and detail_text not in product_info:
-                        product_info.append(detail_text)
-                
         if not product_info:
-            # Thử tìm bất kỳ đoạn văn bản có ý nghĩa nào
-            potential_descriptions = soup.find_all(['p', 'div'], class_=lambda x: x and ('description' in x.lower() or 'detail' in x.lower()))
-            for desc in potential_descriptions:
-                text = desc.get_text().strip()
-                if len(text) > 50:  # Chỉ lấy đoạn văn có ý nghĩa
-                    product_info.append(text)
-                    break
-                    
-        if not product_info:
-            print("No product information found")
             return jsonify({
                 "status": "error",
                 "message": "Không tìm thấy thông tin sản phẩm"
             }), 404
             
-        # Kết hợp tất cả thông tin
-        description = "\n".join(product_info)
-        print(f"Found description: {description[:100]}...")
-        
         return jsonify({
             "status": "success",
-            "description": description
+            "description": product_info
         })
         
-    except requests.Timeout:
-        print("Request timeout")
-        return jsonify({
-            "status": "error",
-            "message": "Timeout khi kết nối đến server"
-        }), 504
-    except requests.RequestException as e:
-        print(f"Request exception: {str(e)}")
-        return jsonify({
-            "status": "error",
-            "message": f"Lỗi khi lấy thông tin sản phẩm: {str(e)}"
-        }), 500
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
+        logger.error(f"Error in fetch_product: {str(e)}")
         return jsonify({
             "status": "error",
             "message": f"Lỗi không xác định: {str(e)}"
