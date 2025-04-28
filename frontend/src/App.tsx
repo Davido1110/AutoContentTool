@@ -231,8 +231,10 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen w-full bg-cover bg-center p-6" style={{ backgroundImage: 'url(/bg.jpg)' }}>
-        <div className="max-w-7xl mx-auto">
+      <div className="min-h-screen w-full p-6 relative" style={{ backgroundImage: 'url(/bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
+        {/* Overlay mờ */}
+        <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-0"></div>
+        <div className="max-w-7xl mx-auto relative z-10">
           <h1 className="text-3xl font-bold text-center text-gray-800 mb-8" style={{textShadow: '0 2px 8px #fff'}}>Công Cụ Tạo Nội Dung AI</h1>
           <div className="flex gap-6">
             {/* Form Section - 1/3 */}
