@@ -57,6 +57,14 @@ const normalizeLeonardoUrl = (url: string): string => {
     normalizedUrl = normalizedUrl.replace('https://', 'https://www.');
   }
   
+  // Loại bỏ query string và hash
+  try {
+    const urlObj = new URL(normalizedUrl);
+    normalizedUrl = urlObj.origin + urlObj.pathname;
+  } catch (e) {
+    // Nếu không phải URL hợp lệ thì giữ nguyên
+  }
+  
   return normalizedUrl;
 };
 
