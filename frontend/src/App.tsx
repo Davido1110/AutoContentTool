@@ -232,14 +232,18 @@ function App() {
   return (
     <ErrorBoundary>
       <div
-        className="min-h-screen w-full p-12 flex items-center justify-center"
+        className="min-h-screen w-full p-12 flex flex-col items-center justify-center"
         style={{
-          backgroundImage: 'url(/bg.jpg)',
+          backgroundImage: 'url(https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1500&q=80)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
         }}
       >
+        {/* App Title */}
+        <h1 className="text-4xl font-bold text-indigo-800 mb-10 drop-shadow-lg bg-white/80 px-8 py-4 rounded-xl shadow-lg text-center">
+          Tool Content Tự Động - By Davido
+        </h1>
         <div className="max-w-7xl w-full flex gap-8">
           {/* Form Section */}
           <ErrorBoundary>
