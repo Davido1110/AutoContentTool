@@ -7,6 +7,14 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import logging
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
+import time
 
 # Load environment variables
 load_dotenv()
@@ -58,94 +66,96 @@ def clean_url(url):
         
     return url
 
-def get_product_info(url):
-    # Tạo session để duy trì cookies
-    session = requests.Session()
+def setup_driver():
+    """Khởi tạo và cấu hình Chrome WebDriver"""
+    chrome_options = Options()
+    # Chạy ở chế độ headless (không hiện UI)
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    # Thêm User-Agent
+    chrome_options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36')
     
-    # Headers giả lập trình duyệt Chrome trên Mac
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-        'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1',
-        'Cache-Control': 'max-age=0',
-        'Referer': 'https://www.leonardo.vn/',
-        'Origin': 'https://www.leonardo.vn'
-    }
-    
+    # Khởi tạo driver
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    return driver
+
+def get_product_info_selenium(url):
+    """Lấy thông tin sản phẩm sử dụng Selenium"""
+    logger.info(f"Getting product info with Selenium from: {url}")
+    driver = None
     try:
-        # Trước tiên truy cập trang chủ để lấy cookies
-        logger.info("Accessing homepage to get cookies...")
-        session.get('https://www.leonardo.vn/', headers=headers, timeout=10)
+        driver = setup_driver()
+        driver.get(url)
         
-        # Sau đó mới truy cập trang sản phẩm
-        logger.info(f"Accessing product page: {url}")
-        response = session.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
+        # Đợi trang load xong
+        time.sleep(2)
         
-        # Log response status và headers
-        logger.info(f"Response status: {response.status_code}")
-        logger.info(f"Response headers: {dict(response.headers)}")
-        
-        # Parse HTML
-        soup = BeautifulSoup(response.text, 'html5lib')
-        
-        # Tìm thông tin sản phẩm
         product_info = []
         
-        # Tìm tên sản phẩm
-        product_name = soup.find('h1', class_='product-title')
-        if product_name:
-            product_info.append(f"Tên sản phẩm: {product_name.get_text().strip()}")
+        # Đợi và lấy tên sản phẩm
+        try:
+            product_name = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "h1.product-title"))
+            )
+            product_info.append(f"Tên sản phẩm: {product_name.text.strip()}")
+        except Exception as e:
+            logger.warning(f"Could not find product name: {str(e)}")
         
-        # Tìm giá
-        product_price = soup.find('span', class_='price')
-        if product_price:
-            product_info.append(f"Giá: {product_price.get_text().strip()}")
+        # Lấy giá sản phẩm
+        try:
+            price_element = driver.find_element(By.CSS_SELECTOR, "span.price")
+            if price_element:
+                product_info.append(f"Giá: {price_element.text.strip()}")
+        except Exception as e:
+            logger.warning(f"Could not find price: {str(e)}")
         
-        # Tìm mô tả sản phẩm - thử nhiều selector khác nhau
+        # Lấy mô tả sản phẩm
         description_selectors = [
-            'div.product-description',
-            'div.description',
-            'div[itemprop="description"]',
-            '.product__description',
-            '#product-description',
-            '.product-single__description',
-            '.product-info__description'
+            "div.product-description",
+            "div.description",
+            "div[itemprop='description']",
+            ".product__description",
+            "#product-description",
+            ".product-single__description"
         ]
         
         for selector in description_selectors:
-            description = soup.select_one(selector)
-            if description:
-                text = description.get_text().strip()
-                if text and text not in product_info:
-                    product_info.append(text)
-                    break
+            try:
+                desc_element = driver.find_element(By.CSS_SELECTOR, selector)
+                if desc_element:
+                    text = desc_element.text.strip()
+                    if text and text not in product_info:
+                        product_info.append(text)
+                        break
+            except:
+                continue
         
-        # Tìm thông tin chi tiết
-        details = soup.find_all(['li', 'div'], string=re.compile(r'(Chất liệu|Size|Kích thước|Đổi size|Mẹo sử dụng)'))
-        for detail in details:
-            text = detail.get_text().strip()
-            if text and text not in product_info:
-                product_info.append(text)
+        # Lấy thông tin chi tiết
+        detail_texts = ["Chất liệu", "Size", "Kích thước", "Đổi size", "Mẹo sử dụng"]
+        for text in detail_texts:
+            try:
+                elements = driver.find_elements(By.XPATH, f"//*[contains(text(), '{text}')]")
+                for element in elements:
+                    detail_text = element.text.strip()
+                    if detail_text and detail_text not in product_info:
+                        product_info.append(detail_text)
+            except Exception as e:
+                logger.warning(f"Could not find detail {text}: {str(e)}")
         
         if not product_info:
-            logger.warning("No product information found in the page")
-            # Log HTML content để debug
-            logger.debug(f"Page HTML: {response.text[:1000]}...")
+            logger.warning("No product information found with Selenium")
             return None
             
         return "\n".join(product_info)
         
     except Exception as e:
-        logger.error(f"Error fetching product info: {str(e)}")
+        logger.error(f"Error in get_product_info_selenium: {str(e)}")
         return None
+    finally:
+        if driver:
+            driver.quit()
 
 @app.route("/api/fetch-product", methods=["POST", "OPTIONS"])
 def fetch_product():
@@ -174,8 +184,8 @@ def fetch_product():
                 "message": "URL không hợp lệ. Chỉ hỗ trợ sản phẩm từ leonardo.vn"
             }), 400
             
-        # Lấy thông tin sản phẩm
-        product_info = get_product_info(product_url)
+        # Lấy thông tin sản phẩm bằng Selenium
+        product_info = get_product_info_selenium(product_url)
         
         if not product_info:
             return jsonify({
