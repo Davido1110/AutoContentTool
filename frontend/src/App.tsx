@@ -243,7 +243,7 @@ function App() {
               Tool Content<br />Tự Động
             </h1>
             <p className="text-xl md:text-2xl text-white/90 mb-8">
-              By CMH 🐽
+              By Davido 🔥
             </p>
           </div>
         </div>
