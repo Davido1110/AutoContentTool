@@ -228,7 +228,23 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen flex flex-col md:flex-row">
+      {/* Header Maison Marou style */}
+      <header className="w-full bg-[#F47C6E] flex items-center justify-between px-8 py-4 shadow-md z-20 relative">
+        <nav className="flex-1 flex gap-8 items-center">
+          <span className="uppercase tracking-widest font-semibold text-white text-sm cursor-pointer hover:underline">Cửa hàng</span>
+          <span className="uppercase tracking-widest font-semibold text-white text-sm cursor-pointer hover:underline">Académie Marou</span>
+          <span className="uppercase tracking-widest font-semibold text-white text-sm cursor-pointer hover:underline">Phiên bản đặc biệt</span>
+        </nav>
+        <div className="flex-shrink-0 flex flex-col items-center">
+          <div className="bg-white rounded-full px-6 py-2 shadow text-[#F47C6E] font-extrabold text-lg tracking-widest border-4 border-white" style={{letterSpacing: '0.15em'}}>MAISON<br/>MAROU</div>
+        </div>
+        <nav className="flex-1 flex gap-8 items-center justify-end">
+          <span className="uppercase tracking-widest font-semibold text-white text-sm cursor-pointer hover:underline">Vị trí</span>
+          <span className="uppercase tracking-widest font-semibold text-white text-sm cursor-pointer hover:underline">Đặt hàng</span>
+          <span className="text-white text-xl cursor-pointer">🛒</span>
+        </nav>
+      </header>
+      <div className="min-h-screen flex flex-col md:flex-row" style={{fontFamily: 'Inter, Arial, sans-serif'}}>
         {/* Left Section - Hero Image and Title */}
         <div className="w-full md:w-1/2 bg-[#1E3932] relative overflow-hidden min-h-[400px] md:min-h-screen flex items-center justify-center">
           <div 
@@ -239,7 +255,7 @@ function App() {
             }}
           />
           <div className="relative z-10 text-center p-8">
-            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">
+            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight drop-shadow-lg">
               Tool Content<br />Tự Động
             </h1>
             <p className="text-xl md:text-2xl text-white/90 mb-8">
@@ -247,25 +263,23 @@ function App() {
             </p>
           </div>
         </div>
-
-        {/* Right Section - Form and Results */}
-        <div className="w-full md:w-1/2 bg-[#006241] text-white p-8 md:p-12 overflow-y-auto max-h-screen">
-          <div className="max-w-2xl mx-auto">
+        {/* Right Section - Form and Results in white card */}
+        <div className="w-full md:w-1/2 flex flex-col items-center justify-center p-4 md:p-12 overflow-y-auto max-h-screen">
+          <div className="w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-8 md:p-12 space-y-8">
             {/* Form Section */}
             <form onSubmit={handleSubmit} className="space-y-8">
               {error?.missing_fields && (
-                <div className="bg-white/10 backdrop-blur-sm border border-white/20 p-4 rounded-lg">
-                  <p className="font-medium text-white">Vui lòng điền đầy đủ thông tin:</p>
-                  <ul className="list-disc list-inside mt-2 text-white/90">
+                <div className="bg-[#FFF3F0] border border-[#F47C6E] p-4 rounded-lg">
+                  <p className="font-medium text-[#F26B5B]">Vui lòng điền đầy đủ thông tin:</p>
+                  <ul className="list-disc list-inside mt-2 text-[#F26B5B]">
                     {error.missing_fields.map((field, index) => (
                       <li key={index}>{field}</li>
                     ))}
                   </ul>
                 </div>
               )}
-
               <div>
-                <label className="block text-lg font-medium text-white mb-3">
+                <label className="block text-lg font-semibold text-[#1E3932] mb-3">
                   Link sản phẩm
                 </label>
                 <div className="relative">
@@ -274,43 +288,41 @@ function App() {
                     name="productLink"
                     value={formData.productLink}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all"
+                    className="w-full px-4 py-3 bg-[#F7F7F7] border border-[#E0E0E0] rounded-lg text-[#1E3932] placeholder-[#B0B0B0] focus:outline-none focus:ring-2 focus:ring-[#F47C6E] transition-all"
                     placeholder="https://..."
                     required
                   />
                   {isFetchingDescription && (
                     <div className="absolute right-3 top-3">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#F47C6E]"></div>
                     </div>
                   )}
                 </div>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-lg font-medium text-white mb-3">
+                  <label className="block text-lg font-semibold text-[#1E3932] mb-3">
                     Giới tính
                   </label>
                   <select
                     name="gender"
                     value={formData.gender}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/30 transition-all"
+                    className="w-full px-4 py-3 bg-[#F7F7F7] border border-[#E0E0E0] rounded-lg text-[#1E3932] focus:outline-none focus:ring-2 focus:ring-[#F47C6E] transition-all"
                   >
                     <option value="male" className="text-gray-900">Nam</option>
                     <option value="female" className="text-gray-900">Nữ</option>
                   </select>
                 </div>
-
                 <div>
-                  <label className="block text-lg font-medium text-white mb-3">
+                  <label className="block text-lg font-semibold text-[#1E3932] mb-3">
                     Độ tuổi
                   </label>
                   <select
                     name="ageGroup"
                     value={formData.ageGroup}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/30 transition-all"
+                    className="w-full px-4 py-3 bg-[#F7F7F7] border border-[#E0E0E0] rounded-lg text-[#1E3932] focus:outline-none focus:ring-2 focus:ring-[#F47C6E] transition-all"
                   >
                     <option value="18-22" className="text-gray-900">18-22 (Sinh viên)</option>
                     <option value="23-28" className="text-gray-900">23-28 (Phát triển)</option>
@@ -318,26 +330,24 @@ function App() {
                   </select>
                 </div>
               </div>
-
               <button
                 type="submit"
                 disabled={loading || isFetchingDescription}
-                className={`w-full py-4 px-6 rounded-lg text-lg font-medium transition-all
+                className={`w-full py-4 px-6 rounded-lg text-lg font-bold transition-all tracking-wider shadow-md
                   ${loading || isFetchingDescription 
-                    ? 'bg-white/30 cursor-not-allowed' 
-                    : 'bg-white text-[#006241] hover:bg-white/90'}`}
+                    ? 'bg-[#B0D9B1] cursor-not-allowed' 
+                    : 'bg-[#3A7D3B] text-white hover:bg-[#2e5e2e]'}`}
               >
                 {loading ? 'Đang tạo...' : isFetchingDescription ? 'Đang lấy thông tin...' : 'Tạo nội dung'}
               </button>
             </form>
-
             {/* Results Section */}
             {(generatedContent1 || generatedContent2) && (
-              <div className="mt-12 space-y-8">
+              <div className="space-y-8">
                 {/* Result 1 */}
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 relative">
-                  <h3 className="text-xl font-semibold mb-4">Nội dung 1</h3>
-                  <pre className="whitespace-pre-wrap text-white/90 font-sans">
+                <div className="bg-[#F7F7F7] rounded-xl p-6 relative shadow-md">
+                  <h3 className="text-xl font-bold text-[#1E3932] mb-4">Nội dung 1</h3>
+                  <pre className="whitespace-pre-wrap text-[#1E3932] font-sans text-base">
                     {generatedContent1}
                   </pre>
                   <button
@@ -345,17 +355,16 @@ function App() {
                       navigator.clipboard.writeText(generatedContent1);
                       toast.success("Đã sao chép nội dung 1!");
                     }}
-                    className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all"
+                    className="absolute top-4 right-4 p-2 bg-[#F47C6E] hover:bg-[#F26B5B] rounded-lg transition-all shadow text-white"
                     title="Sao chép nội dung 1"
                   >
-                    <ClipboardIcon className="h-5 w-5 text-white" />
+                    <ClipboardIcon className="h-5 w-5" />
                   </button>
                 </div>
-
                 {/* Result 2 */}
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 relative">
-                  <h3 className="text-xl font-semibold mb-4">Nội dung 2</h3>
-                  <pre className="whitespace-pre-wrap text-white/90 font-sans">
+                <div className="bg-[#F7F7F7] rounded-xl p-6 relative shadow-md">
+                  <h3 className="text-xl font-bold text-[#1E3932] mb-4">Nội dung 2</h3>
+                  <pre className="whitespace-pre-wrap text-[#1E3932] font-sans text-base">
                     {generatedContent2}
                   </pre>
                   <button
@@ -363,10 +372,10 @@ function App() {
                       navigator.clipboard.writeText(generatedContent2);
                       toast.success("Đã sao chép nội dung 2!");
                     }}
-                    className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all"
+                    className="absolute top-4 right-4 p-2 bg-[#F47C6E] hover:bg-[#F26B5B] rounded-lg transition-all shadow text-white"
                     title="Sao chép nội dung 2"
                   >
-                    <ClipboardIcon className="h-5 w-5 text-white" />
+                    <ClipboardIcon className="h-5 w-5" />
                   </button>
                 </div>
               </div>
